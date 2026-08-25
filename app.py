@@ -57,6 +57,7 @@ def init_db():
         )
     ''')
     
+    # Seed default users if empty
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
         default_users = [
@@ -68,6 +69,9 @@ def init_db():
         ]
         cursor.executemany("INSERT OR IGNORE INTO users VALUES (?, ?, ?)", default_users)
         
+    # Seed default employees if empty
+    cursor.execute("SELECT COUNT(*) FROM employees")
+    if cursor.fetchone()[0] == 0:
         default_emps = [
             ("Satyam Porwal", "EBND04737", "Nandini Puri", "TL01"),
             ("Ritu Mandal", "EBND04635", "Nandini Puri", "TL01"),
@@ -76,6 +80,19 @@ def init_db():
             ("Basu Porwal", "EBND04475", "Satyam Porwal", "TL02")
         ]
         cursor.executemany("INSERT OR IGNORE INTO employees VALUES (?, ?, ?, ?)", default_emps)
+
+    # Seed sample OT logs so dashboards are never blank
+    cursor.execute("SELECT COUNT(*) FROM ot_logs")
+    if cursor.fetchone()[0] == 0:
+        default_logs = [
+            ("2026-08-24", "Basu Porwal", "EBND04475", "09:00", "18:00", "18:00", "21:00", 3.0, "Calls", "Pending", "Satyam Porwal", 0.0, 12.0, 36.0, 0.0, 0.0, 0.0, "", ""),
+            ("2026-08-25", "Ritu Mandal", "EBND04635", "09:00", "18:00", "18:00", "21:00", 3.0, "Backend", "Approved", "Nandini Puri", 35.0, 10.0, 30.0, 1.16, 3.0, 360.0, "Satyam Porwal", "2026-08-25 20:00"),
+            ("2026-08-25", "Jamal Khan", "EBND04471", "09:00", "18:00", "18:00", "22:00", 4.0, "Tickets", "Pending", "Nandini Puri", 0.0, 12.0, 48.0, 0.0, 0.0, 0.0, "", "")
+        ]
+        cursor.executemany("""
+            INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, default_logs)
         
     conn.commit()
     conn.close()
@@ -141,7 +158,6 @@ st.markdown("""
             color: #334155;
         }
         
-        /* Branded Header Logo Style */
         .brand-logo {
             font-size: 24px;
             font-weight: 800;
@@ -153,18 +169,6 @@ st.markdown("""
             color: #FF6B00;
         }
         
-        /* Modern Card with Orange Top Border */
-        .excitel-card {
-            background: #FFFFFF;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);
-            border: 1px solid #E2E8F0;
-            border-top: 6px solid #FF6B00;
-            margin-bottom: 25px;
-        }
-        
-        /* Custom Button Styling */
         .stButton>button {
             background: linear-gradient(135deg, #FF6B00, #FF8B33);
             color: white;
