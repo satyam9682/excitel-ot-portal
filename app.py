@@ -4,6 +4,22 @@ import pandas as pd
 from datetime import datetime, date
 from fpdf import FPDF
 import altair as alt
+import os
+
+# ==================== AUTOMATIC LIGHT THEME CONFIG ====================
+os.makedirs(".streamlit", exist_ok=True)
+config_path = ".streamlit/config.toml"
+if not os.path.exists(config_path):
+    with open(config_path, "w") as f:
+        f.write("""
+[theme]
+base="light"
+primaryColor="#FF6B00"
+backgroundColor="#F8F9FA"
+secondaryBackgroundColor="#FFFFFF"
+textColor="#201F1E"
+font="sans serif"
+""")
 
 # ==================== DATABASE SETUP ====================
 DB_NAME = "excitel_ot.db"
@@ -142,7 +158,7 @@ def generate_pdf_report(df_to_print, title):
         
     return bytes(pdf.output())
 
-# ==================== MICROSOFT FLUENT & EXCITEL CSS ====================
+# ==================== PAGE CONFIG & STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
 st.markdown("""
@@ -150,23 +166,21 @@ st.markdown("""
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
         
         html, body, [class*="css"] {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: #F8F9FA;
             color: #201F1E;
         }
         
-        /* Microsoft Fluent Card Style */
         .fluent-card {
             background: #FFFFFF;
             border: 1px solid #E1DFDD;
-            border-radius: 8px;
-            padding: 24px;
-            box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,0.1), 0 0.3px 0.9px 0 rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            border-top: 4px solid #FF6B00;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border-top: 6px solid #FF6B00;
         }
         
-        /* Brand Header */
         .brand-logo {
             font-size: 22px;
             font-weight: 700;
@@ -178,35 +192,21 @@ st.markdown("""
             color: #FF6B00;
         }
         
-        /* Modern Fluent Action Buttons */
         .stButton>button {
             background-color: #1E3A8A !important;
             color: white !important;
-            border-radius: 4px !important;
+            border-radius: 6px !important;
             font-weight: 600 !important;
             border: none !important;
-            padding: 8px 18px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            transition: all 0.2s ease;
-            width: 100%;
+            padding: 8px 20px !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
         .stButton>button:hover {
             background-color: #FF6B00 !important;
-            box-shadow: 0 4px 12px rgba(255,107,0,0.25);
-        }
-        
-        /* Metric container styling */
-        div[data-testid="metric-container"] {
-            background-color: #FFFFFF;
-            border: 1px solid #E1DFDD;
-            padding: 16px;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
         
-        /* Sidebar Styling */
         [data-testid="stSidebar"] {
             background-color: #FFFFFF;
             border-right: 1px solid #E1DFDD;
@@ -241,7 +241,7 @@ def get_current_user_info():
 
 user = get_current_user_info()
 
-# ==================== SIDEBAR USER SWITCHER ====================
+# ==================== SIDEBAR ====================
 st.sidebar.markdown("<div class='brand-logo' style='margin-bottom:15px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"**User:** {user['name']}  \n**Role:** `{user['role']}`")
 
