@@ -158,7 +158,7 @@ def generate_pdf_report(df_to_print, title):
         
     return bytes(pdf.output())
 
-# ==================== PAGE CONFIG & STYLING ====================
+# ==================== PAGE CONFIG & 3D STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
 st.markdown("""
@@ -171,18 +171,19 @@ st.markdown("""
             color: #201F1E;
         }
         
+        /* 3D Sleek Header Card */
         .fluent-card {
             background: #FFFFFF;
             border: 1px solid #E1DFDD;
             border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
+            padding: 24px 30px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
             border-top: 6px solid #FF6B00;
         }
         
         .brand-logo {
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 700;
             letter-spacing: 0.5px;
             color: #1E3A8A;
@@ -192,17 +193,22 @@ st.markdown("""
             color: #FF6B00;
         }
         
+        /* 3D Interactive Tab Buttons */
         .stButton>button {
-            background-color: #1E3A8A !important;
+            background: linear-gradient(135deg, #1E3A8A 0%, #152A63 100%) !important;
             color: white !important;
-            border-radius: 6px !important;
+            border-radius: 8px !important;
             font-weight: 600 !important;
             border: none !important;
-            padding: 8px 20px !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            padding: 10px 24px !important;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25), inset 0 1px 0 rgba(255,255,255,0.15);
+            transition: all 0.2s ease;
+            width: 100%;
         }
         .stButton>button:hover {
-            background-color: #FF6B00 !important;
+            background: linear-gradient(135deg, #FF6B00 0%, #E05D00 100%) !important;
+            box-shadow: 0 6px 16px rgba(255, 107, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+            transform: translateY(-2px);
         }
         
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
@@ -263,39 +269,38 @@ if selected_login != st.session_state.user_email:
 st.sidebar.markdown("---")
 st.sidebar.info("💡 Switch users here to test Employee, TL, and Admin permissions instantly.")
 
-# ==================== TOP NAVIGATION BAR ====================
-col_nav1, col_nav2, col_nav3, col_nav4, col_nav5, col_nav6 = st.columns([2.2, 1, 1, 1, 1, 1])
+# ==================== TOP NAVIGATION BAR (3D TABS BELOW LOGO) ====================
+st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Logged in as: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
+
+col_nav1, col_nav2, col_nav3, col_nav4, col_nav5 = st.columns([1, 1, 1, 1, 1])
 
 with col_nav1:
-    st.markdown(f"<div style='padding-top: 10px;'><span style='color: #1E3A8A; font-weight: 600; font-size: 14px;'>🛡️ {user['name']} <span style='color:#605E5C;'>({user['role']})</span></span></div>", unsafe_allow_html=True)
-
-with col_nav2:
     if st.button("📝 Form", use_container_width=True):
         st.session_state.current_view = "portal"
         st.rerun()
 
-with col_nav3:
+with col_nav2:
     if st.button("📋 History", use_container_width=True):
         st.session_state.current_view = "history"
         st.rerun()
 
 if user['role'] in ["TL", "Admin"]:
-    with col_nav4:
+    with col_nav3:
         if st.button("📊 Dashboard", use_container_width=True):
             st.session_state.current_view = "dashboard"
             st.rerun()
-    with col_nav5:
+    with col_nav4:
         if st.button("📈 Reports", use_container_width=True):
             st.session_state.current_view = "reports"
             st.rerun()
 
 if user['role'] == "Admin":
-    with col_nav6:
+    with col_nav5:
         if st.button("⚙️ Admin", use_container_width=True):
             st.session_state.current_view = "admin"
             st.rerun()
 
-st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border: none; border-top: 1px solid #E1DFDD;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin-top: 15px; margin-bottom: 25px; border: none; border-top: 1px solid #E1DFDD;'>", unsafe_allow_html=True)
 
 RATES = {'Calls': 12, 'Backend': 10, 'Tickets': 12, 'Complaints': 8, 'Email': 15}
 
@@ -307,11 +312,13 @@ def time_to_minutes(t_str):
 if st.session_state.current_view == "portal":
     st.markdown("""
         <div class="fluent-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin: 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Submit and manage overtime requests with real-time verification.</p>
+                </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
-            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Submit and manage overtime requests with real-time verification.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -385,11 +392,13 @@ if st.session_state.current_view == "portal":
 elif st.session_state.current_view == "history":
     st.markdown("""
         <div class="fluent-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin: 0; color: #1E3A8A;">📋 My Overtime History</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📋 My Overtime History</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Review your submitted overtime records, verification statuses, and payout summaries.</p>
+                </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
-            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Review your submitted overtime records, verification statuses, and payout summaries.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -419,11 +428,13 @@ elif st.session_state.current_view == "history":
 elif st.session_state.current_view == "dashboard":
     st.markdown("""
         <div class="fluent-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin: 0; color: #1E3A8A;">📊 TL Approval & Analytics Dashboard</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📊 TL Approval & Analytics Dashboard</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Approve team overtime requests, track team productivity metrics, and analyze operational costs.</p>
+                </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
-            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Approve team overtime requests, track team productivity metrics, and analyze operational costs.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -520,11 +531,13 @@ elif st.session_state.current_view == "dashboard":
 elif st.session_state.current_view == "reports":
     st.markdown("""
         <div class="fluent-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin: 0; color: #1E3A8A;">📈 Advanced Reports Engine</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📈 Advanced Reports Engine</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Generate monthly summary reports, analyze payout distributions, and export official data.</p>
+                </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
-            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Generate monthly summary reports, analyze payout distributions, and export official data.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -581,11 +594,13 @@ elif st.session_state.current_view == "reports":
 elif st.session_state.current_view == "admin":
     st.markdown("""
         <div class="fluent-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h2 style="margin: 0; color: #1E3A8A;">⚙️ Admin User Management</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User Management</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Manage system users, permissions, and role assignments across the enterprise portal.</p>
+                </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
-            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Manage system users, permissions, and role assignments across the enterprise portal.</p>
         </div>
     """, unsafe_allow_html=True)
     
