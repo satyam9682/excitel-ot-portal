@@ -57,7 +57,6 @@ def init_db():
         )
     ''')
     
-    # Seed default users if empty
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
         default_users = [
@@ -69,7 +68,6 @@ def init_db():
         ]
         cursor.executemany("INSERT OR IGNORE INTO users VALUES (?, ?, ?)", default_users)
         
-    # Seed default employees if empty
     cursor.execute("SELECT COUNT(*) FROM employees")
     if cursor.fetchone()[0] == 0:
         default_emps = [
@@ -81,7 +79,6 @@ def init_db():
         ]
         cursor.executemany("INSERT OR IGNORE INTO employees VALUES (?, ?, ?, ?)", default_emps)
 
-    # Seed sample OT logs so dashboards are never blank
     cursor.execute("SELECT COUNT(*) FROM ot_logs")
     if cursor.fetchone()[0] == 0:
         default_logs = [
@@ -145,23 +142,35 @@ def generate_pdf_report(df_to_print, title):
         
     return bytes(pdf.output())
 
-# ==================== PAGE CONFIG & BRANDED CSS ====================
+# ==================== MICROSOFT FLUENT & EXCITEL CSS ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
         
         html, body, [class*="css"] {
-            font-family: 'Poppins', sans-serif;
-            background-color: #F4F7FC;
-            color: #334155;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #F8F9FA;
+            color: #201F1E;
         }
         
+        /* Microsoft Fluent Card Style */
+        .fluent-card {
+            background: #FFFFFF;
+            border: 1px solid #E1DFDD;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,0.1), 0 0.3px 0.9px 0 rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border-top: 4px solid #FF6B00;
+        }
+        
+        /* Brand Header */
         .brand-logo {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 1px;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             color: #1E3A8A;
             text-transform: uppercase;
         }
@@ -169,21 +178,39 @@ st.markdown("""
             color: #FF6B00;
         }
         
+        /* Modern Fluent Action Buttons */
         .stButton>button {
-            background: linear-gradient(135deg, #FF6B00, #FF8B33);
-            color: white;
-            border-radius: 12px;
-            font-weight: 700;
-            border: none;
-            box-shadow: 0 4px 15px rgba(255,107,0,0.3);
+            background-color: #1E3A8A !important;
+            color: white !important;
+            border-radius: 4px !important;
+            font-weight: 600 !important;
+            border: none !important;
+            padding: 8px 18px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: all 0.2s ease;
             width: 100%;
         }
         .stButton>button:hover {
-            opacity: 0.95;
-            box-shadow: 0 6px 20px rgba(255,107,0,0.4);
+            background-color: #FF6B00 !important;
+            box-shadow: 0 4px 12px rgba(255,107,0,0.25);
         }
         
-        h1, h2, h3 { color: #1E3A8A; font-weight: 700; }
+        /* Metric container styling */
+        div[data-testid="metric-container"] {
+            background-color: #FFFFFF;
+            border: 1px solid #E1DFDD;
+            padding: 16px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        
+        h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
+        
+        /* Sidebar Styling */
+        [data-testid="stSidebar"] {
+            background-color: #FFFFFF;
+            border-right: 1px solid #E1DFDD;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -215,7 +242,7 @@ def get_current_user_info():
 user = get_current_user_info()
 
 # ==================== SIDEBAR USER SWITCHER ====================
-st.sidebar.markdown("<div class='brand-logo' style='font-size:20px; margin-bottom:10px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
+st.sidebar.markdown("<div class='brand-logo' style='margin-bottom:15px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"**User:** {user['name']}  \n**Role:** `{user['role']}`")
 
 conn = get_connection()
@@ -234,16 +261,16 @@ if selected_login != st.session_state.user_email:
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 Switch users here to test Employee, TL, and Admin permissions instantly!")
+st.sidebar.info("💡 Switch users here to test Employee, TL, and Admin permissions instantly.")
 
 # ==================== TOP NAVIGATION BAR ====================
 col_nav1, col_nav2, col_nav3, col_nav4, col_nav5, col_nav6 = st.columns([2.2, 1, 1, 1, 1, 1])
 
 with col_nav1:
-    st.markdown(f"<div style='padding-top: 8px;'><span style='color: #1E3A8A; font-weight: 700; font-size: 14px;'>🛡️ {user['name']} ({user['role']})</span></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='padding-top: 10px;'><span style='color: #1E3A8A; font-weight: 600; font-size: 14px;'>🛡️ {user['name']} <span style='color:#605E5C;'>({user['role']})</span></span></div>", unsafe_allow_html=True)
 
 with col_nav2:
-    if st.button("📝 OT Form", use_container_width=True):
+    if st.button("📝 Form", use_container_width=True):
         st.session_state.current_view = "portal"
         st.rerun()
 
@@ -268,7 +295,7 @@ if user['role'] == "Admin":
             st.session_state.current_view = "admin"
             st.rerun()
 
-st.markdown("---")
+st.markdown("<hr style='margin-top: 10px; margin-bottom: 20px; border: none; border-top: 1px solid #E1DFDD;'>", unsafe_allow_html=True)
 
 RATES = {'Calls': 12, 'Backend': 10, 'Tickets': 12, 'Complaints': 8, 'Email': 15}
 
@@ -279,9 +306,12 @@ def time_to_minutes(t_str):
 # ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
-            <div class="brand-logo">EXCIT<span>EL</span></div>
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Submit and manage overtime requests with real-time verification.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -354,9 +384,12 @@ if st.session_state.current_view == "portal":
 # ==================== 2. MY HISTORY ====================
 elif st.session_state.current_view == "history":
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #1E3A8A;">📋 My Overtime History</h2>
-            <div class="brand-logo">EXCIT<span>EL</span></div>
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: #1E3A8A;">📋 My Overtime History</h2>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Review your submitted overtime records, verification statuses, and payout summaries.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -385,9 +418,12 @@ elif st.session_state.current_view == "history":
 # ==================== 3. APPROVAL DASHBOARD ====================
 elif st.session_state.current_view == "dashboard":
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #1E3A8A;">📊 TL Approval & Modern Analytics Dashboard</h2>
-            <div class="brand-logo">EXCIT<span>EL</span></div>
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: #1E3A8A;">📊 TL Approval & Analytics Dashboard</h2>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Approve team overtime requests, track team productivity metrics, and analyze operational costs.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -428,7 +464,7 @@ elif st.session_state.current_view == "dashboard":
         with ch2:
             st.markdown("#### Task-wise OT Hours")
             task_counts = df.groupby('task_type')['ot_hours'].sum().reset_index()
-            chart_task = alt.Chart(task_counts).mark_bar(color='#1E3A8A', cornerRadiusTopLeft=6, cornerRadiusTopRight=6).encode(
+            chart_task = alt.Chart(task_counts).mark_bar(color='#1E3A8A', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
                 x=alt.X('task_type', sort='-y', title='Task Type'),
                 y=alt.Y('ot_hours', title='Total Hours')
             ).properties(height=220)
@@ -483,9 +519,12 @@ elif st.session_state.current_view == "dashboard":
 # ==================== 4. REPORTS ENGINE ====================
 elif st.session_state.current_view == "reports":
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #1E3A8A;">📈 Advanced Reports Engine</h2>
-            <div class="brand-logo">EXCIT<span>EL</span></div>
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: #1E3A8A;">📈 Advanced Reports Engine</h2>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Generate monthly summary reports, analyze payout distributions, and export official data.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -541,9 +580,12 @@ elif st.session_state.current_view == "reports":
 # ==================== 5. USER MANAGEMENT ====================
 elif st.session_state.current_view == "admin":
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0; color: #1E3A8A;">⚙️ Admin User Management</h2>
-            <div class="brand-logo">EXCIT<span>EL</span></div>
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; color: #1E3A8A;">⚙️ Admin User Management</h2>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+            <p style="color: #605E5C; font-size: 14px; margin-bottom: 0;">Manage system users, permissions, and role assignments across the enterprise portal.</p>
         </div>
     """, unsafe_allow_html=True)
     
