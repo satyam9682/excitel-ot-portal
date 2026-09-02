@@ -5,6 +5,7 @@ from datetime import datetime, date
 from fpdf import FPDF
 import altair as alt
 import os
+import hashlib
 
 # ==================== AUTOMATIC LIGHT THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -30,13 +31,15 @@ def get_connection():
         st.error(f"🚨 Detailed DB Error: {e}")
         raise e
 
+def hash_password(password):
+    """Securely hash passwords using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Drop old table schema to cleanly recreate with unified columns
-    cursor.execute('DROP TABLE IF EXISTS users CASCADE;')
-    
+    # Users table with secure password hash column
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -44,7 +47,8 @@ def init_db():
             role TEXT,
             emp_id TEXT,
             tl_name TEXT,
-            tl_id TEXT
+            tl_id TEXT,
+            password_hash TEXT
         )
     ''')
     
@@ -73,69 +77,27 @@ def init_db():
         )
     ''')
     
+    # Default users with secure default password: "Password123"
+    default_pass_hash = hash_password("Password123")
     default_users = [
-        ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND04737", "Nandini Puri", "TL01"),
-        ("ritu.mandal@dl.excitel.in", "Ritu Mandal", "Admin", "EBND04635", "Nandini Puri", "TL01"),
-        ("jamal.khan@dl.excitel.in", "Jamal Khan", "TL", "EBND04471", "Nandini Puri", "TL01"),
-        ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01"),
-        ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02")
+        ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND04737", "Nandini Puri", "TL01", default_pass_hash),
+        ("ritu.mandal@dl.excitel.in", "Ritu Mandal", "Admin", "EBND04635", "Nandini Puri", "TL01", default_pass_hash),
+        ("jamal.khan@dl.excitel.in", "Jamal Khan", "TL", "EBND04471", "Nandini Puri", "TL01", default_pass_hash),
+        ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01", default_pass_hash),
+        ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02", default_pass_hash)
     ]
     cursor.executemany("""
-        INSERT INTO users (email, name, role, emp_id, tl_name, tl_id) VALUES (%s, %s, %s, %s, %s, %s) 
+        INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s) 
         ON CONFLICT (email) DO UPDATE SET 
-            name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id
+            name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
+            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id
     """, default_users)
         
     conn.commit()
     conn.close()
 
 init_db()
-
-# ==================== PDF GENERATOR ====================
-class OTReportPDF(FPDF):
-    def header(self):
-        self.set_font('helvetica', 'B', 15)
-        self.set_text_color(30, 58, 138)
-        self.cell(0, 10, 'EXCITEL - Overtime Report', 0, 1, 'C')
-        self.ln(5)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('helvetica', 'I', 8)
-        self.set_text_color(100, 100, 100)
-        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
-
-def generate_pdf_report(df_to_print, title):
-    pdf = OTReportPDF()
-    pdf.add_page()
-    pdf.set_font('helvetica', 'B', 12)
-    pdf.set_text_color(50, 50, 50)
-    pdf.cell(0, 10, title, 0, 1, 'L')
-    pdf.ln(5)
-    
-    pdf.set_font('helvetica', 'B', 9)
-    pdf.set_fill_color(30, 58, 138)
-    pdf.set_text_color(255, 255, 255)
-    
-    columns = ['Date', 'Employee', 'Task', 'Hours', 'Status', 'Amount']
-    col_widths = [25, 45, 30, 20, 25, 30]
-    
-    for i, col in enumerate(columns):
-        pdf.cell(col_widths[i], 8, col, 1, 0, 'C', True)
-    pdf.ln()
-    
-    pdf.set_font('helvetica', '', 9)
-    pdf.set_text_color(50, 50, 50)
-    for _, row in df_to_print.iterrows():
-        pdf.cell(col_widths[0], 7, str(row.get('date', '')), 1, 0, 'C')
-        pdf.cell(col_widths[1], 7, str(row.get('employee_name', ''))[:20], 1, 0, 'L')
-        pdf.cell(col_widths[2], 7, str(row.get('task_type', '')), 1, 0, 'C')
-        pdf.cell(col_widths[3], 7, str(row.get('ot_hours', '')), 1, 0, 'C')
-        pdf.cell(col_widths[4], 7, str(row.get('status', '')), 1, 0, 'C')
-        pdf.cell(col_widths[5], 7, f"Rs.{row.get('amount', 0)}", 1, 0, 'C')
-        pdf.ln()
-        
-    return bytes(pdf.output())
 
 # ==================== PAGE CONFIG & STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
@@ -186,12 +148,63 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ==================== SECURE AUTHENTICATION ====================
+# ==================== SESSION STATE AUTHENTICATION ====================
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 if 'user_email' not in st.session_state:
-    st.session_state.user_email = "porwal.satyam1@gmail.com"
+    st.session_state.user_email = ""
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = ""
+if 'user_name' not in st.session_state:
+    st.session_state.user_name = ""
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
+# ==================== LOGIN GATEWAY ====================
+if not st.session_state.authenticated:
+    col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
+    with col_l2:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class="fluent-card" style="text-align: center;">
+                <div class="brand-logo" style="margin-bottom: 10px;">EXCIT<span>EL</span></div>
+                <h3 style="margin-bottom: 5px;">Overtime Tracking Portal</h3>
+                <p style="color: #605E5C; font-size: 13px;">Please sign in with your official credentials.</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("login_form"):
+            login_email = st.text_input("Official Email ID")
+            login_password = st.text_input("Password", type="password")
+            submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
+            
+            if submit_login:
+                if not login_email or not login_password:
+                    st.error("Please enter both email and password.")
+                else:
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
+                    res = cursor.fetchone()
+                    conn.close()
+                    
+                    if res:
+                        db_name, db_role, db_pass_hash = res
+                        if db_pass_hash == hash_password(login_password):
+                            st.session_state.authenticated = True
+                            st.session_state.user_email = login_email.strip().lower()
+                            st.session_state.user_name = db_name
+                            st.session_state.user_role = db_role
+                            st.session_state.current_view = "portal"
+                            st.success("Login successful! Loading portal...")
+                            st.rerun()
+                        else:
+                            st.error("❌ Incorrect password. Please try again.")
+                    else:
+                        st.error("❌ Email not found in authorized system registry.")
+    st.stop() # Halts rendering of the rest of the app until authenticated
+
+# ==================== FETCH LOGGED-IN USER DETAILS ====================
 def get_logged_in_user():
     conn = get_connection()
     cursor = conn.cursor()
@@ -200,30 +213,27 @@ def get_logged_in_user():
     conn.close()
     if res:
         return {"email": res[0], "name": res[1], "role": res[2], "empId": res[3], "tlName": res[4], "tlId": res[5]}
-    return {"email": st.session_state.user_email, "name": "Guest", "role": "Employee", "empId": "N/A", "tlName": "Unassigned", "tlId": ""}
+    return {"email": st.session_state.user_email, "name": st.session_state.user_name, "role": st.session_state.user_role, "empId": "N/A", "tlName": "Unassigned", "tlId": ""}
 
 user = get_logged_in_user()
 
 # ==================== SIDEBAR ====================
 st.sidebar.markdown("<div class='brand-logo' style='margin-bottom:15px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
+st.sidebar.markdown(f"**Signed In As:**  \n`{user['name']}`")
+st.sidebar.markdown(f"**Role:** `{user['role']}`")
 
-entered_email = st.sidebar.text_input("🔑 Enter Your Login Email:", value=st.session_state.user_email)
-if entered_email != st.session_state.user_email:
-    st.session_state.user_email = entered_email.strip()
+st.sidebar.markdown("---")
+if st.sidebar.button("🚪 Sign Out", use_container_width=True):
+    st.session_state.authenticated = False
+    st.session_state.user_email = ""
+    st.session_state.user_role = ""
+    st.session_state.user_name = ""
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"**User:** {user['name']}  \n**Role:** `{user['role']}`")
-if user['role'] == "Guest":
-    st.sidebar.warning("⚠️ Email not recognized in system database. Contact Admin.")
-
-st.sidebar.markdown("---")
-st.sidebar.info("🔒 **Security Active:** Roles and page access are strictly restricted based on your database privileges.")
+st.sidebar.info("🔒 **Secure Session Active:** All actions are logged and authenticated.")
 
 # ==================== STRICT ROLE-BASED NAVIGATION ====================
-if user['role'] not in ["Employee", "TL", "Admin"]:
-    st.session_state.current_view = "portal"
-
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 nav_cols = st.columns(5)
@@ -292,6 +302,7 @@ if st.session_state.current_view == "portal":
     target_emp_id = user['empId']
     target_tl = user['tlName']
     
+    # TL and Admin can submit proxy requests for employees
     if user['role'] in ["TL", "Admin"]:
         st.markdown("### 🛡️ Submit on Behalf of Employee (Proxy)")
         conn = get_connection()
@@ -607,8 +618,8 @@ elif st.session_state.current_view == "admin":
             <div class="fluent-card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User & Role Management</h2>
-                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Add new users, assign roles, and map team relationships.</p>
+                        <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User & Credential Management</h2>
+                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Create user credentials, assign roles, and map team relationships.</p>
                     </div>
                     <div class="brand-logo">EXCIT<span>EL</span></div>
                 </div>
@@ -616,40 +627,43 @@ elif st.session_state.current_view == "admin":
         """, unsafe_allow_html=True)
         
         with st.form("add_user_form"):
-            st.markdown("### Add / Update User & Access Profile")
+            st.markdown("### Create / Update User & Password")
             u_name = st.text_input("Full Name")
-            u_email = st.text_input("Google Email Address (Login ID)")
+            u_email = st.text_input("Official Email ID (Login ID)")
+            u_pass = st.text_input("Set / Reset Password", type="password")
             u_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"])
             u_emp_id = st.text_input("Employee ID (e.g. EBND04XXX)")
             u_tl_name = st.text_input("Assigned Team Leader Name")
             u_tl_id = st.text_input("Assigned Team Leader ID")
             
-            if st.form_submit_button("Save User Profile ➕", type="primary"):
-                if u_name and u_email and u_emp_id:
+            if st.form_submit_button("Save User Credential ➕", type="primary"):
+                if u_name and u_email and u_pass and u_emp_id:
                     conn = get_connection()
                     cursor = conn.cursor()
+                    pass_hash = hash_password(u_pass)
                     try:
                         cursor.execute("""
-                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id) 
-                            VALUES (%s, %s, %s, %s, %s, %s)
+                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (email) DO UPDATE SET 
                                 name = EXCLUDED.name, 
                                 role = EXCLUDED.role, 
                                 emp_id = EXCLUDED.emp_id, 
                                 tl_name = EXCLUDED.tl_name, 
-                                tl_id = EXCLUDED.tl_id
-                        """, (u_email.strip(), u_name, u_role, u_emp_id, u_tl_name, u_tl_id))
+                                tl_id = EXCLUDED.tl_id,
+                                password_hash = EXCLUDED.password_hash
+                        """, (u_email.strip().lower(), u_name, u_role, u_emp_id, u_tl_name, u_tl_id, pass_hash))
                         conn.commit()
-                        st.success(f"User {u_name} ({u_role}) saved successfully!")
+                        st.success(f"User {u_name} credentials saved successfully!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
                     finally:
                         conn.close()
                 else:
-                    st.error("Please fill in Name, Email, and Employee ID.")
+                    st.error("Please fill in Name, Email, Password, and Employee ID.")
                     
-        st.markdown("### 📋 Active System Users & Permissions Directory")
+        st.markdown("### 📋 Active System Users Directory")
         conn = get_connection()
         users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name FROM users", conn)
         conn.close()
