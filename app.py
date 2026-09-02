@@ -34,7 +34,9 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Unified users table containing role, emp_id, and tl details
+    # Drop old table schema to cleanly recreate with unified columns
+    cursor.execute('DROP TABLE IF EXISTS users CASCADE;')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -186,7 +188,7 @@ st.markdown("""
 
 # ==================== SECURE AUTHENTICATION ====================
 if 'user_email' not in st.session_state:
-    st.session_state.user_email = "porwal.satyam1@gmail.com" # Default fallback for testing
+    st.session_state.user_email = "porwal.satyam1@gmail.com"
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
@@ -205,7 +207,6 @@ user = get_logged_in_user()
 # ==================== SIDEBAR ====================
 st.sidebar.markdown("<div class='brand-logo' style='margin-bottom:15px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
 
-# Secure login email input (Replaces vulnerable role switcher dropdown)
 entered_email = st.sidebar.text_input("🔑 Enter Your Login Email:", value=st.session_state.user_email)
 if entered_email != st.session_state.user_email:
     st.session_state.user_email = entered_email.strip()
@@ -225,7 +226,6 @@ if user['role'] not in ["Employee", "TL", "Admin"]:
 
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
-# Navigation tabs based strictly on permissions
 nav_cols = st.columns(5)
 
 with nav_cols[0]:
@@ -233,28 +233,24 @@ with nav_cols[0]:
         st.session_state.current_view = "portal"
         st.rerun()
 
-# Employee & Admin get History
 if user['role'] in ["Employee", "Admin"]:
     with nav_cols[1]:
         if st.button("📋 History", use_container_width=True):
             st.session_state.current_view = "history"
             st.rerun()
 
-# TL & Admin get Dashboard
 if user['role'] in ["TL", "Admin"]:
     with nav_cols[2]:
         if st.button("📊 Dashboard", use_container_width=True):
             st.session_state.current_view = "dashboard"
             st.rerun()
 
-# TL & Admin get Reports
 if user['role'] in ["TL", "Admin"]:
     with nav_cols[3]:
         if st.button("📈 Reports", use_container_width=True):
             st.session_state.current_view = "reports"
             st.rerun()
 
-# Only Admin gets User & Employee Management
 if user['role'] == "Admin":
     with nav_cols[4]:
         if st.button("⚙️ Admin", use_container_width=True):
@@ -296,7 +292,6 @@ if st.session_state.current_view == "portal":
     target_emp_id = user['empId']
     target_tl = user['tlName']
     
-    # TL and Admin can submit proxy requests for employees
     if user['role'] in ["TL", "Admin"]:
         st.markdown("### 🛡️ Submit on Behalf of Employee (Proxy)")
         conn = get_connection()
@@ -359,7 +354,7 @@ if st.session_state.current_view == "portal":
                 conn.close()
                 st.success(f"✅ OT successfully requested for {target_name} ({ot_hours} hrs)!")
 
-# ==================== 2. MY HISTORY (Employee View) ====================
+# ==================== 2. MY HISTORY ====================
 elif st.session_state.current_view == "history":
     if user['role'] not in ["Employee", "Admin"]:
         st.error("⛔ Access Denied. History view is restricted to Employees.")
@@ -412,7 +407,7 @@ elif st.session_state.current_view == "history":
                 pdf_data = generate_pdf_report(filtered_history, f"OT History - {user['name']}")
                 st.download_button("Download PDF Statement 📄", data=pdf_data, file_name="my_ot_history.pdf", mime="application/pdf")
 
-# ==================== 3. APPROVAL DASHBOARD (TL & Admin View) ====================
+# ==================== 3. APPROVAL DASHBOARD ====================
 elif st.session_state.current_view == "dashboard":
     if user['role'] not in ["TL", "Admin"]:
         st.error("⛔ Access Denied. Dashboard is restricted to Team Leaders and Admins.")
@@ -531,7 +526,7 @@ elif st.session_state.current_view == "dashboard":
             styled_all_df = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
             st.dataframe(styled_all_df, use_container_width=True)
 
-# ==================== 4. REPORTS ENGINE (TL & Admin View) ====================
+# ==================== 4. REPORTS ENGINE ====================
 elif st.session_state.current_view == "reports":
     if user['role'] not in ["TL", "Admin"]:
         st.error("⛔ Access Denied. Reports are restricted to Team Leaders and Admins.")
@@ -603,7 +598,7 @@ elif st.session_state.current_view == "reports":
         else:
             st.info("No records found.")
 
-# ==================== 5. ADMIN MANAGEMENT PANEL (Strictly Admin Only) ====================
+# ==================== 5. ADMIN MANAGEMENT PANEL ====================
 elif st.session_state.current_view == "admin":
     if user['role'] != "Admin":
         st.error("⛔ Access Denied. User Management is strictly restricted to Admins.")
