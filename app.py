@@ -21,7 +21,7 @@ textColor="#201F1E"
 font="sans serif"
 """)
 
-# ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
+# ==================== DATABASE SETUP ====================
 def get_connection():
     db_url = st.secrets["database"]["url"]
     try:
@@ -76,7 +76,6 @@ def init_db():
         )
     ''')
     
-    # Safe insertion using ON CONFLICT handling
     default_users = [
         ("porwal.satyam1@gmail.com", "Admin", "Satyam Porwal"),
         ("ritu.mandal@dl.excitel.in", "Admin", "Ritu Mandal"),
@@ -152,20 +151,17 @@ def generate_pdf_report(df_to_print, title):
         
     return bytes(pdf.output())
 
-# ==================== PAGE CONFIG & 3D STYLING ====================
+# ==================== PAGE CONFIG & STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
-        
         html, body, [class*="css"] {
             font-family: 'Segoe UI', sans-serif;
             background-color: #F8F9FA;
             color: #201F1E;
         }
-        
-        /* 3D Sleek Header Card */
         .fluent-card {
             background: #FFFFFF;
             border: 1px solid #E1DFDD;
@@ -175,7 +171,6 @@ st.markdown("""
             margin-bottom: 20px;
             border-top: 6px solid #FF6B00;
         }
-        
         .brand-logo {
             font-size: 26px;
             font-weight: 700;
@@ -183,11 +178,7 @@ st.markdown("""
             color: #1E3A8A;
             text-transform: uppercase;
         }
-        .brand-logo span {
-            color: #FF6B00;
-        }
-        
-        /* 3D Interactive Tab Buttons */
+        .brand-logo span { color: #FF6B00; }
         .stButton>button {
             background: linear-gradient(135deg, #1E3A8A 0%, #152A63 100%) !important;
             color: white !important;
@@ -195,18 +186,13 @@ st.markdown("""
             font-weight: 600 !important;
             border: none !important;
             padding: 10px 24px !important;
-            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25), inset 0 1px 0 rgba(255,255,255,0.15);
-            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
             width: 100%;
         }
         .stButton>button:hover {
             background: linear-gradient(135deg, #FF6B00 0%, #E05D00 100%) !important;
-            box-shadow: 0 6px 16px rgba(255, 107, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-            transform: translateY(-2px);
         }
-        
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
-        
         [data-testid="stSidebar"] {
             background-color: #FFFFFF;
             border-right: 1px solid #E1DFDD;
@@ -302,6 +288,15 @@ def time_to_minutes(t_str):
     h, m = map(int, t_str.split(':'))
     return h * 60 + m
 
+def highlight_status(val):
+    if val == 'Approved':
+        return 'background-color: #D1FAE5; color: #065F46; font-weight: bold;'
+    elif val == 'Pending':
+        return 'background-color: #FEF3C7; color: #92400E; font-weight: bold;'
+    elif val == 'Rejected':
+        return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
+    return ''
+
 # ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
@@ -382,7 +377,7 @@ if st.session_state.current_view == "portal":
                 conn.close()
                 st.success(f"✅ OT successfully requested for {target_name} ({ot_hours} hrs)!")
 
-# ==================== 2. MY HISTORY ====================
+# ==================== 2. MY HISTORY (With Date Range Filters & Status Colors) ====================
 elif st.session_state.current_view == "history":
     st.markdown("""
         <div class="fluent-card">
@@ -403,22 +398,37 @@ elif st.session_state.current_view == "history":
     if df.empty:
         st.info("No OT records found.")
     else:
-        total_hrs = df['ot_hours'].sum()
-        app_hrs = df[df['status'] == 'Approved']['verified_hours'].sum()
-        total_amt = df['amount'].sum()
+        st.markdown("### 🔍 Filter Records")
+        fc1, fc2, fc3 = st.columns(3)
+        with fc1:
+            start_date_filter = st.date_input("Start Date", value=date(date.today().year, date.today().month, 1))
+        with fc2:
+            end_date_filter = st.date_input("End Date", value=date.today())
+        with fc3:
+            status_filter = st.selectbox("Status Filter", options=["All", "Pending", "Approved", "Rejected"])
+            
+        df['date_dt'] = pd.to_datetime(df['date']).dt.date
+        filtered_history = df[(df['date_dt'] >= start_date_filter) & (df['date_dt'] <= end_date_filter)]
+        if status_filter != "All":
+            filtered_history = filtered_history[filtered_history['status'] == status_filter]
+            
+        total_hrs = filtered_history['ot_hours'].sum()
+        app_hrs = filtered_history[filtered_history['status'] == 'Approved']['verified_hours'].sum()
+        total_amt = filtered_history['amount'].sum()
         
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Hours Requested", f"{total_hrs:.1f} hrs")
+        c1.metric("Filtered Hours Requested", f"{total_hrs:.1f} hrs")
         c2.metric("Approved Payable Hours", f"{app_hrs:.1f} hrs")
-        c3.metric("Total Payout Amount", f"₹{total_amt:.0f}")
+        c3.metric("Filtered Payout Amount", f"₹{total_amt:.0f}")
         
-        st.dataframe(df[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']], use_container_width=True)
+        styled_history = filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+        st.dataframe(styled_history, use_container_width=True)
         
-        if not df.empty:
-            pdf_data = generate_pdf_report(df, f"OT History - {user['name']}")
+        if not filtered_history.empty:
+            pdf_data = generate_pdf_report(filtered_history, f"OT History - {user['name']}")
             st.download_button("Download PDF Statement 📄", data=pdf_data, file_name="my_ot_history.pdf", mime="application/pdf")
 
-# ==================== 3. APPROVAL DASHBOARD ====================
+# ==================== 3. APPROVAL DASHBOARD (With Trend Chart & Status Colors) ====================
 elif st.session_state.current_view == "dashboard":
     st.markdown("""
         <div class="fluent-card">
@@ -453,17 +463,17 @@ elif st.session_state.current_view == "dashboard":
         m3.metric("Pending Approvals", pending_cnt)
         m4.metric("Approved Requests", approved_cnt)
         
-        st.markdown("### 📈 Visual Analytics")
-        ch1, ch2 = st.columns(2)
+        st.markdown("### 📈 Visual Analytics & Cost Trends")
+        ch1, ch2, ch3 = st.columns(3)
         
         with ch1:
             st.markdown("#### Status Breakdown")
             status_counts = df['status'].value_counts().reset_index()
             status_counts.columns = ['Status', 'Count']
-            chart_status = alt.Chart(status_counts).mark_arc(innerRadius=50).encode(
+            chart_status = alt.Chart(status_counts).mark_arc(innerRadius=40).encode(
                 theta=alt.Theta(field="Count", type="quantitative"),
                 color=alt.Color(field="Status", type="nominal", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#10B981', '#EF4444']))
-            ).properties(height=220)
+            ).properties(height=200)
             st.altair_chart(chart_status, use_container_width=True)
             
         with ch2:
@@ -472,8 +482,20 @@ elif st.session_state.current_view == "dashboard":
             chart_task = alt.Chart(task_counts).mark_bar(color='#1E3A8A', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
                 x=alt.X('task_type', sort='-y', title='Task Type'),
                 y=alt.Y('ot_hours', title='Total Hours')
-            ).properties(height=220)
+            ).properties(height=200)
             st.altair_chart(chart_task, use_container_width=True)
+
+        with ch3:
+            st.markdown("#### Daily Cost Trend")
+            trend_df = df[df['status'] == 'Approved'].groupby('date')['amount'].sum().reset_index()
+            if not trend_df.empty:
+                chart_trend = alt.Chart(trend_df).mark_line(point=True, color='#FF6B00').encode(
+                    x=alt.X('date:T', title='Date'),
+                    y=alt.Y('amount:Q', title='Approved Payout (₹)')
+                ).properties(height=200)
+                st.altair_chart(chart_trend, use_container_width=True)
+            else:
+                st.info("No approved cost trends yet.")
 
         st.markdown("### 📝 Pending Requests Review")
         pending_df = df[df['status'] == 'Pending']
@@ -519,9 +541,10 @@ elif st.session_state.current_view == "dashboard":
                             st.rerun()
 
         st.markdown("### 📋 All Requests Log")
-        st.dataframe(df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']], use_container_width=True)
+        styled_all_df = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+        st.dataframe(styled_all_df, use_container_width=True)
 
-# ==================== 4. REPORTS ENGINE ====================
+# ==================== 4. REPORTS ENGINE (With Date Range Filters & Status Colors) ====================
 elif st.session_state.current_view == "reports":
     st.markdown("""
         <div class="fluent-card">
@@ -537,11 +560,13 @@ elif st.session_state.current_view == "reports":
     
     r_type = st.selectbox("Select Report Type", options=["Monthly Summary Report", "Detailed OT Log Report"])
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         report_month = st.selectbox("Month", options=list(range(1, 13)), index=date.today().month - 1)
     with col2:
         report_year = st.selectbox("Year", options=[2025, 2026, 2027], index=1)
+    with col3:
+        report_status = st.selectbox("Status Filter", options=["All", "Approved", "Pending", "Rejected"], key="rep_status")
         
     conn = get_connection()
     df = pd.read_sql("SELECT * FROM ot_logs", conn)
@@ -550,6 +575,9 @@ elif st.session_state.current_view == "reports":
     if not df.empty:
         df['date_dt'] = pd.to_datetime(df['date'])
         filtered_df = df[(df['date_dt'].dt.month == report_month) & (df['date_dt'].dt.year == report_year)]
+        
+        if report_status != "All":
+            filtered_df = filtered_df[filtered_df['status'] == report_status]
         
         if user['role'] == 'TL':
             filtered_df = filtered_df[filtered_df['tl_name'] == user['name']]
@@ -573,7 +601,8 @@ elif st.session_state.current_view == "reports":
                 pdf_data = generate_pdf_report(filtered_df, f"Monthly Summary Report - {report_month}/{report_year}")
                 st.download_button("Download PDF 📄", data=pdf_data, file_name="monthly_summary.pdf", mime="application/pdf")
         else:
-            st.dataframe(filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']], use_container_width=True)
+            styled_report_df = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+            st.dataframe(styled_report_df, use_container_width=True)
             col_d1, col_d2 = st.columns(2)
             with col_d1:
                 csv = filtered_df.to_csv(index=False).encode('utf-8')
@@ -584,43 +613,80 @@ elif st.session_state.current_view == "reports":
     else:
         st.info("No records found.")
 
-# ==================== 5. USER MANAGEMENT ====================
+# ==================== 5. USER & EMPLOYEE MANAGEMENT DIRECTORY ====================
 elif st.session_state.current_view == "admin":
     st.markdown("""
         <div class="fluent-card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User Management</h2>
-                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Manage system users, permissions, and role assignments across the enterprise portal.</p>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin Directory & User Management</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Manage system users, permissions, and employee organizational mappings.</p>
                 </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
         </div>
     """, unsafe_allow_html=True)
     
-    with st.form("add_user_form"):
-        st.markdown("### Add New User")
-        new_name = st.text_input("Full Name")
-        new_email = st.text_input("Google Email Address")
-        new_role = st.selectbox("Role", options=["Employee", "TL", "Admin"])
-        
-        if st.form_submit_button("Add User ➕", type="primary"):
-            if new_name and new_email:
-                conn = get_connection()
-                cursor = conn.cursor()
-                try:
-                    cursor.execute("INSERT INTO users (email, role, name) VALUES (%s, %s, %s)", (new_email, new_role, new_name))
-                    conn.commit()
-                    st.success(f"User {new_name} added successfully!")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-                finally:
-                    conn.close()
-            else:
-                st.error("Please fill in both fields.")
-                
-    st.markdown("### Existing System Users")
-    conn = get_connection()
-    users_df = pd.read_sql("SELECT * FROM users", conn)
-    conn.close()
-    st.dataframe(users_df, use_container_width=True)
+    tab_u1, tab_u2 = st.tabs(["👤 System Users", "👥 Employee Directory"])
+    
+    with tab_u1:
+        with st.form("add_user_form"):
+            st.markdown("### Add New System User")
+            new_name = st.text_input("Full Name")
+            new_email = st.text_input("Google Email Address")
+            new_role = st.selectbox("Role", options=["Employee", "TL", "Admin"])
+            
+            if st.form_submit_button("Add User ➕", type="primary"):
+                if new_name and new_email:
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    try:
+                        cursor.execute("INSERT INTO users (email, role, name) VALUES (%s, %s, %s)", (new_email, new_role, new_name))
+                        conn.commit()
+                        st.success(f"User {new_name} added successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                    finally:
+                        conn.close()
+                else:
+                    st.error("Please fill in both fields.")
+                    
+        st.markdown("### Existing System Users")
+        conn = get_connection()
+        users_df = pd.read_sql("SELECT * FROM users", conn)
+        conn.close()
+        st.dataframe(users_df, use_container_width=True)
+
+    with tab_u2:
+        with st.form("add_emp_form"):
+            st.markdown("### Add / Map Employee Record")
+            e_name = st.text_input("Employee Full Name")
+            e_id = st.text_input("Employee ID (e.g. EBND04XXX)")
+            e_tl = st.text_input("Team Leader Name")
+            e_tl_id = st.text_input("Team Leader ID")
+            
+            if st.form_submit_button("Add Employee Record ➕", type="primary"):
+                if e_name and e_id:
+                    conn = get_connection()
+                    cursor = conn.cursor()
+                    try:
+                        cursor.execute("""
+                            INSERT INTO employees (name, emp_id, tl_name, tl_id) VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (name) DO UPDATE SET emp_id = EXCLUDED.emp_id, tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id
+                        """, (e_name, e_id, e_tl, e_tl_id))
+                        conn.commit()
+                        st.success(f"Employee {e_name} saved successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+                    finally:
+                        conn.close()
+                else:
+                    st.error("Please fill in Name and Employee ID.")
+
+        st.markdown("### Current Employee Directory Database")
+        conn = get_connection()
+        emp_db_df = pd.read_sql("SELECT * FROM employees", conn)
+        conn.close()
+        st.dataframe(emp_db_df, use_container_width=True)
