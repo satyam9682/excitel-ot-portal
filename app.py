@@ -20,12 +20,13 @@ secondaryBackgroundColor="#FFFFFF"
 textColor="#201F1E"
 font="sans serif"
 """)
-
-# ==================== DATABASE SETUP ====================
-DB_NAME = "excitel_ot.db"
+# ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
+import psycopg2
 
 def get_connection():
-    return sqlite3.connect(DB_NAME, check_same_thread=False)
+    # Connects to PostgreSQL using the secret URL we stored
+    db_url = st.secrets["database"]["url"]
+    return psycopg2.connect(db_url)
 
 def init_db():
     conn = get_connection()
