@@ -1,5 +1,5 @@
 import streamlit as st
-import sqlite3
+import psycopg2
 import pandas as pd
 from datetime import datetime, date
 from fpdf import FPDF
@@ -20,11 +20,9 @@ secondaryBackgroundColor="#FFFFFF"
 textColor="#201F1E"
 font="sans serif"
 """)
-# ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
-import psycopg2
 
+# ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
 def get_connection():
-    # Connects to PostgreSQL using the secret URL we stored
     db_url = st.secrets["database"]["url"]
     return psycopg2.connect(db_url)
 
@@ -51,7 +49,7 @@ def init_db():
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS ot_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             date TEXT,
             employee_name TEXT,
             emp_id TEXT,
@@ -83,7 +81,7 @@ def init_db():
             ("abhishek.pandey@dl.excitel.in", "TL", "Abhishek Pandey"),
             ("basu.porwal@dl.excitel.in", "Employee", "Basu Porwal")
         ]
-        cursor.executemany("INSERT OR IGNORE INTO users VALUES (?, ?, ?)", default_users)
+        cursor.executemany("INSERT INTO users (email, role, name) VALUES (%s, %s, %s) ON CONFLICT (email) DO NOTHING", default_users)
         
     cursor.execute("SELECT COUNT(*) FROM employees")
     if cursor.fetchone()[0] == 0:
@@ -94,19 +92,7 @@ def init_db():
             ("Abhishek Pandey", "EBND04472", "Nandini Puri", "TL01"),
             ("Basu Porwal", "EBND04475", "Satyam Porwal", "TL02")
         ]
-        cursor.executemany("INSERT OR IGNORE INTO employees VALUES (?, ?, ?, ?)", default_emps)
-
-    cursor.execute("SELECT COUNT(*) FROM ot_logs")
-    if cursor.fetchone()[0] == 0:
-        default_logs = [
-            ("2026-08-24", "Basu Porwal", "EBND04475", "09:00", "18:00", "18:00", "21:00", 3.0, "Calls", "Pending", "Satyam Porwal", 0.0, 12.0, 36.0, 0.0, 0.0, 0.0, "", ""),
-            ("2026-08-25", "Ritu Mandal", "EBND04635", "09:00", "18:00", "18:00", "21:00", 3.0, "Backend", "Approved", "Nandini Puri", 35.0, 10.0, 30.0, 1.16, 3.0, 360.0, "Satyam Porwal", "2026-08-25 20:00"),
-            ("2026-08-25", "Jamal Khan", "EBND04471", "09:00", "18:00", "18:00", "22:00", 4.0, "Tickets", "Pending", "Nandini Puri", 0.0, 12.0, 48.0, 0.0, 0.0, 0.0, "", "")
-        ]
-        cursor.executemany("""
-            INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, default_logs)
+        cursor.executemany("INSERT INTO employees (name, emp_id, tl_name, tl_id) VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO NOTHING", default_emps)
         
     conn.commit()
     conn.close()
@@ -230,14 +216,14 @@ if 'current_view' not in st.session_state:
 def get_current_user_info():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT role, name FROM users WHERE email = ?", (st.session_state.user_email,))
+    cursor.execute("SELECT role, name FROM users WHERE email = %s", (st.session_state.user_email,))
     res = cursor.fetchone()
     conn.close()
     if res:
         role, name = res
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT emp_id, tl_name, tl_id FROM employees WHERE name = ?", (name,))
+        cursor.execute("SELECT emp_id, tl_name, tl_id FROM employees WHERE name = %s", (name,))
         emp_res = cursor.fetchone()
         conn.close()
         emp_id = emp_res[0] if emp_res else "N/A"
@@ -336,7 +322,7 @@ if st.session_state.current_view == "portal":
         if selected_proxy != "Select Employee...":
             conn = get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT name, emp_id, tl_name FROM employees WHERE name = ?", (selected_proxy,))
+            cursor.execute("SELECT name, emp_id, tl_name FROM employees WHERE name = %s", (selected_proxy,))
             p_res = cursor.fetchone()
             conn.close()
             if p_res:
@@ -383,7 +369,7 @@ if st.session_state.current_view == "portal":
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 0, 0, 0, '', '')
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, 0, 0, 0, '', '')
                 """, (req_date.strftime("%Y-%m-%d"), target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
                 conn.commit()
                 conn.close()
@@ -404,7 +390,7 @@ elif st.session_state.current_view == "history":
     """, unsafe_allow_html=True)
     
     conn = get_connection()
-    df = pd.read_sql("SELECT * FROM ot_logs WHERE employee_name = ?", conn, params=(user['name'],))
+    df = pd.read_sql("SELECT * FROM ot_logs WHERE employee_name = %s", conn, params=(user['name'],))
     conn.close()
     
     if df.empty:
@@ -508,8 +494,8 @@ elif st.session_state.current_view == "dashboard":
                             conn = get_connection()
                             cursor = conn.cursor()
                             cursor.execute("""
-                                UPDATE ot_logs SET status = 'Approved', actual_output = ?, productivity = ?, verified_hours = ?, amount = ?, approved_by = ?, approved_at = ?
-                                WHERE id = ?
+                                UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = %s, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
+                                WHERE id = %s
                             """, (actual_out, prod, v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
                             conn.commit()
                             conn.close()
@@ -519,7 +505,7 @@ elif st.session_state.current_view == "dashboard":
                         if col_btn2.button("Reject ❌", key=f"rej_{row['id']}"):
                             conn = get_connection()
                             cursor = conn.cursor()
-                            cursor.execute("UPDATE ot_logs SET status = 'Rejected', approved_by = ?, approved_at = ? WHERE id = ?", (user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                            cursor.execute("UPDATE ot_logs SET status = 'Rejected', approved_by = %s, approved_at = %s WHERE id = %s", (user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
                             conn.commit()
                             conn.close()
                             st.warning("Request rejected.")
@@ -616,7 +602,7 @@ elif st.session_state.current_view == "admin":
                 conn = get_connection()
                 cursor = conn.cursor()
                 try:
-                    cursor.execute("INSERT INTO users VALUES (?, ?, ?)", (new_email, new_role, new_name))
+                    cursor.execute("INSERT INTO users (email, role, name) VALUES (%s, %s, %s)", (new_email, new_role, new_name))
                     conn.commit()
                     st.success(f"User {new_name} added successfully!")
                 except Exception as e:
