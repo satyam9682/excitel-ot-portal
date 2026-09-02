@@ -22,9 +22,6 @@ font="sans serif"
 """)
 
 # ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
-# ==================== DATABASE SETUP (DIAGNOSTIC MODE) ====================
-import psycopg2
-
 def get_connection():
     db_url = st.secrets["database"]["url"]
     try:
@@ -79,27 +76,30 @@ def init_db():
         )
     ''')
     
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        default_users = [
-            ("porwal.satyam1@gmail.com", "Admin", "Satyam Porwal"),
-            ("ritu.mandal@dl.excitel.in", "Admin", "Ritu Mandal"),
-            ("jamal.khan@dl.excitel.in", "TL", "Jamal Khan"),
-            ("abhishek.pandey@dl.excitel.in", "TL", "Abhishek Pandey"),
-            ("basu.porwal@dl.excitel.in", "Employee", "Basu Porwal")
-        ]
-        cursor.executemany("INSERT INTO users (email, role, name) VALUES (%s, %s, %s) ON CONFLICT (email) DO NOTHING", default_users)
-        
-    cursor.execute("SELECT COUNT(*) FROM employees")
-    if cursor.fetchone()[0] == 0:
-        default_emps = [
-            ("Satyam Porwal", "EBND04737", "Nandini Puri", "TL01"),
-            ("Ritu Mandal", "EBND04635", "Nandini Puri", "TL01"),
-            ("Jamal Khan", "EBND04471", "Nandini Puri", "TL01"),
-            ("Abhishek Pandey", "EBND04472", "Nandini Puri", "TL01"),
-            ("Basu Porwal", "EBND04475", "Satyam Porwal", "TL02")
-        ]
-        cursor.executemany("INSERT INTO employees (name, emp_id, tl_name, tl_id) VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO NOTHING", default_emps)
+    # Safe insertion using ON CONFLICT handling
+    default_users = [
+        ("porwal.satyam1@gmail.com", "Admin", "Satyam Porwal"),
+        ("ritu.mandal@dl.excitel.in", "Admin", "Ritu Mandal"),
+        ("jamal.khan@dl.excitel.in", "TL", "Jamal Khan"),
+        ("abhishek.pandey@dl.excitel.in", "TL", "Abhishek Pandey"),
+        ("basu.porwal@dl.excitel.in", "Employee", "Basu Porwal")
+    ]
+    cursor.executemany("""
+        INSERT INTO users (email, role, name) VALUES (%s, %s, %s) 
+        ON CONFLICT (email) DO NOTHING
+    """, default_users)
+    
+    default_emps = [
+        ("Satyam Porwal", "EBND04737", "Nandini Puri", "TL01"),
+        ("Ritu Mandal", "EBND04635", "Nandini Puri", "TL01"),
+        ("Jamal Khan", "EBND04471", "Nandini Puri", "TL01"),
+        ("Abhishek Pandey", "EBND04472", "Nandini Puri", "TL01"),
+        ("Basu Porwal", "EBND04475", "Satyam Porwal", "TL02")
+    ]
+    cursor.executemany("""
+        INSERT INTO employees (name, emp_id, tl_name, tl_id) VALUES (%s, %s, %s, %s) 
+        ON CONFLICT (name) DO NOTHING
+    """, default_emps)
         
     conn.commit()
     conn.close()
@@ -263,7 +263,7 @@ if selected_login != st.session_state.user_email:
 st.sidebar.markdown("---")
 st.sidebar.info("💡 Switch users here to test Employee, TL, and Admin permissions instantly.")
 
-# ==================== TOP NAVIGATION BAR (3D TABS BELOW LOGO) ====================
+# ==================== TOP NAVIGATION BAR ====================
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Logged in as: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 col_nav1, col_nav2, col_nav3, col_nav4, col_nav5 = st.columns([1, 1, 1, 1, 1])
