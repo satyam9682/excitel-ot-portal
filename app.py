@@ -661,6 +661,7 @@ elif st.session_state.current_view == "admin":
                         st.error("Please fill in Name, Email, Password, and Employee ID.")
 
         # --- TAB 2: EDIT EXISTING USER ---
+# --- TAB 2: EDIT EXISTING USER ---
         with tab_adm2:
             st.markdown("### Edit User & Credentials")
             conn = get_connection()
@@ -670,19 +671,27 @@ elif st.session_state.current_view == "admin":
             if all_users_df.empty:
                 st.info("No users found.")
             else:
-                selected_edit_email = st.selectbox("Select User to Edit", options=all_users_df['email'].tolist())
+                selected_edit_email = st.selectbox("Select User to Edit", options=all_users_df['email'].tolist(), key="edit_user_selectbox")
+                
+                # Fetch exact row for the selected email dynamically
                 user_row = all_users_df[all_users_df['email'] == selected_edit_email].iloc[0]
                 
                 with st.form("edit_user_form"):
-                    e_name = st.text_input("Full Name", value=user_row['name'])
-                    e_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"], index=["Employee", "TL", "Admin"].index(user_row['role']) if user_row['role'] in ["Employee", "TL", "Admin"] else 0)
-                    e_emp_id = st.text_input("Employee ID", value=user_row['emp_id'] if user_row['emp_id'] else "")
-                    e_tl_name = st.text_input("Assigned Team Leader Name", value=user_row['tl_name'] if user_row['tl_name'] else "")
-                    e_tl_id = st.text_input("Assigned Team Leader ID", value=user_row['tl_id'] if user_row['tl_id'] else "")
+                    # Bound keys ensure form fields update correctly when selection changes
+                    e_name = st.text_input("Full Name", value=str(user_row['name']), key=f"name_{selected_edit_email}")
+                    
+                    role_options = ["Employee", "TL", "Admin"]
+                    current_role = str(user_row['role'])
+                    role_idx = role_options.index(current_role) if current_role in role_options else 0
+                    e_role = st.selectbox("Role Assignment", options=role_options, index=role_idx, key=f"role_{selected_edit_email}")
+                    
+                    e_emp_id = st.text_input("Employee ID", value=str(user_row['emp_id'] if user_row['emp_id'] else ""), key=f"empid_{selected_edit_email}")
+                    e_tl_name = st.text_input("Assigned Team Leader Name", value=str(user_row['tl_name'] if user_row['tl_name'] else ""), key=f"tlname_{selected_edit_email}")
+                    e_tl_id = st.text_input("Assigned Team Leader ID", value=str(user_row['tl_id'] if user_row['tl_id'] else ""), key=f"tlid_{selected_edit_email}")
                     
                     st.markdown("---")
                     st.markdown("**Reset Password (Optional):** Leave blank to keep current password.")
-                    e_new_pass = st.text_input("New Password", type="password")
+                    e_new_pass = st.text_input("New Password", type="password", key=f"pass_{selected_edit_email}")
                     
                     if st.form_submit_button("Update User Profile 💾", type="primary"):
                         conn = get_connection()
