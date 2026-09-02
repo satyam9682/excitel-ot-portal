@@ -39,6 +39,9 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
+    # Drop old table schema to cleanly recreate with password_hash column
+    cursor.execute('DROP TABLE IF EXISTS users CASCADE;')
+    
     # Users table with secure password hash column
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -91,7 +94,8 @@ def init_db():
         VALUES (%s, %s, %s, %s, %s, %s, %s) 
         ON CONFLICT (email) DO UPDATE SET 
             name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
-            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id
+            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
+            password_hash = EXCLUDED.password_hash
     """, default_users)
         
     conn.commit()
