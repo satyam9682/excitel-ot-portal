@@ -22,9 +22,16 @@ font="sans serif"
 """)
 
 # ==================== DATABASE SETUP (SUPABASE / POSTGRESQL) ====================
+# ==================== DATABASE SETUP (DIAGNOSTIC MODE) ====================
+import psycopg2
+
 def get_connection():
     db_url = st.secrets["database"]["url"]
-    return psycopg2.connect(db_url)
+    try:
+        return psycopg2.connect(db_url)
+    except Exception as e:
+        st.error(f"🚨 Detailed DB Error: {e}")
+        raise e
 
 def init_db():
     conn = get_connection()
