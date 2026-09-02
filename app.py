@@ -6,6 +6,7 @@ from fpdf import FPDF
 import altair as alt
 import os
 import hashlib
+import io
 
 # ==================== AUTOMATIC LIGHT THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -38,9 +39,6 @@ def hash_password(password):
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Drop old table schema to cleanly recreate with password_hash column
-    cursor.execute('DROP TABLE IF EXISTS users CASCADE;')
     
     # Users table with secure password hash column
     cursor.execute('''
@@ -94,8 +92,7 @@ def init_db():
         VALUES (%s, %s, %s, %s, %s, %s, %s) 
         ON CONFLICT (email) DO UPDATE SET 
             name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
-            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
-            password_hash = EXCLUDED.password_hash
+            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id
     """, default_users)
         
     conn.commit()
@@ -206,7 +203,7 @@ if not st.session_state.authenticated:
                             st.error("❌ Incorrect password. Please try again.")
                     else:
                         st.error("❌ Email not found in authorized system registry.")
-    st.stop() # Halts rendering of the rest of the app until authenticated
+    st.stop()
 
 # ==================== FETCH LOGGED-IN USER DETAILS ====================
 def get_logged_in_user():
@@ -237,7 +234,7 @@ if st.sidebar.button("🚪 Sign Out", use_container_width=True):
 st.sidebar.markdown("---")
 st.sidebar.info("🔒 **Secure Session Active:** All actions are logged and authenticated.")
 
-# ==================== STRICT ROLE-BASED NAVIGATION ====================
+# ==================== NAVIGATION BAR ====================
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 nav_cols = st.columns(5)
@@ -306,7 +303,6 @@ if st.session_state.current_view == "portal":
     target_emp_id = user['empId']
     target_tl = user['tlName']
     
-    # TL and Admin can submit proxy requests for employees
     if user['role'] in ["TL", "Admin"]:
         st.markdown("### 🛡️ Submit on Behalf of Employee (Proxy)")
         conn = get_connection()
@@ -622,51 +618,151 @@ elif st.session_state.current_view == "admin":
             <div class="fluent-card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User & Credential Management</h2>
-                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Create user credentials, assign roles, and map team relationships.</p>
+                        <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User, Credential & Bulk Onboarding</h2>
+                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Create, edit users, reset credentials, or upload employees in bulk.</p>
                     </div>
                     <div class="brand-logo">EXCIT<span>EL</span></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        with st.form("add_user_form"):
-            st.markdown("### Create / Update User & Password")
-            u_name = st.text_input("Full Name")
-            u_email = st.text_input("Official Email ID (Login ID)")
-            u_pass = st.text_input("Set / Reset Password", type="password")
-            u_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"])
-            u_emp_id = st.text_input("Employee ID (e.g. EBND04XXX)")
-            u_tl_name = st.text_input("Assigned Team Leader Name")
-            u_tl_id = st.text_input("Assigned Team Leader ID")
+        tab_adm1, tab_adm2, tab_adm3 = st.tabs(["➕ Add New User", "✏️ Edit Existing User", "📁 Bulk Excel Upload"])
+        
+        # --- TAB 1: ADD NEW USER ---
+        with tab_adm1:
+            with st.form("add_user_form"):
+                st.markdown("### Create New User Credential")
+                u_name = st.text_input("Full Name")
+                u_email = st.text_input("Official Email ID (Login ID)")
+                u_pass = st.text_input("Password", type="password")
+                u_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"])
+                u_emp_id = st.text_input("Employee ID (e.g. EBND04XXX)")
+                u_tl_name = st.text_input("Assigned Team Leader Name")
+                u_tl_id = st.text_input("Assigned Team Leader ID")
+                
+                if st.form_submit_button("Save User ➕", type="primary"):
+                    if u_name and u_email and u_pass and u_emp_id:
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        pass_hash = hash_password(u_pass)
+                        try:
+                            cursor.execute("""
+                                INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            """, (u_email.strip().lower(), u_name, u_role, u_emp_id, u_tl_name, u_tl_id, pass_hash))
+                            conn.commit()
+                            st.success(f"User {u_name} created successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                        finally:
+                            conn.close()
+                    else:
+                        st.error("Please fill in Name, Email, Password, and Employee ID.")
+
+        # --- TAB 2: EDIT EXISTING USER ---
+        with tab_adm2:
+            st.markdown("### Edit User & Credentials")
+            conn = get_connection()
+            all_users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users", conn)
+            conn.close()
             
-            if st.form_submit_button("Save User Credential ➕", type="primary"):
-                if u_name and u_email and u_pass and u_emp_id:
-                    conn = get_connection()
-                    cursor = conn.cursor()
-                    pass_hash = hash_password(u_pass)
-                    try:
-                        cursor.execute("""
-                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (email) DO UPDATE SET 
-                                name = EXCLUDED.name, 
-                                role = EXCLUDED.role, 
-                                emp_id = EXCLUDED.emp_id, 
-                                tl_name = EXCLUDED.tl_name, 
-                                tl_id = EXCLUDED.tl_id,
-                                password_hash = EXCLUDED.password_hash
-                        """, (u_email.strip().lower(), u_name, u_role, u_emp_id, u_tl_name, u_tl_id, pass_hash))
-                        conn.commit()
-                        st.success(f"User {u_name} credentials saved successfully!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error: {e}")
-                    finally:
-                        conn.close()
-                else:
-                    st.error("Please fill in Name, Email, Password, and Employee ID.")
+            if all_users_df.empty:
+                st.info("No users found.")
+            else:
+                selected_edit_email = st.selectbox("Select User to Edit", options=all_users_df['email'].tolist())
+                user_row = all_users_df[all_users_df['email'] == selected_edit_email].iloc[0]
+                
+                with st.form("edit_user_form"):
+                    e_name = st.text_input("Full Name", value=user_row['name'])
+                    e_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"], index=["Employee", "TL", "Admin"].index(user_row['role']) if user_row['role'] in ["Employee", "TL", "Admin"] else 0)
+                    e_emp_id = st.text_input("Employee ID", value=user_row['emp_id'] if user_row['emp_id'] else "")
+                    e_tl_name = st.text_input("Assigned Team Leader Name", value=user_row['tl_name'] if user_row['tl_name'] else "")
+                    e_tl_id = st.text_input("Assigned Team Leader ID", value=user_row['tl_id'] if user_row['tl_id'] else "")
                     
+                    st.markdown("---")
+                    st.markdown("**Reset Password (Optional):** Leave blank to keep current password.")
+                    e_new_pass = st.text_input("New Password", type="password")
+                    
+                    if st.form_submit_button("Update User Profile 💾", type="primary"):
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        try:
+                            if e_new_pass:
+                                new_pass_hash = hash_password(e_new_pass)
+                                cursor.execute("""
+                                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s, password_hash = %s WHERE email = %s
+                                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, new_pass_hash, selected_edit_email))
+                            else:
+                                cursor.execute("""
+                                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s WHERE email = %s
+                                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, selected_edit_email))
+                            conn.commit()
+                            st.success(f"User {selected_edit_email} updated successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error updating user: {e}")
+                        finally:
+                            conn.close()
+
+        # --- TAB 3: BULK EXCEL UPLOAD ---
+        with tab_adm3:
+            st.markdown("### Bulk Onboard Employees via Excel / CSV")
+            st.markdown("""
+                Upload an Excel (`.xlsx`) or CSV file containing user records. 
+                \n**Required Column Headers:** `email`, `name`, `role`, `emp_id`, `tl_name`, `tl_id`, `password` 
+                *(Note: If the password column is left blank or omitted, it defaults to `Password123`)*
+            """)
+            
+            uploaded_file = st.file_uploader("Upload Employee Data File", type=["xlsx", "csv"])
+            
+            if uploaded_file is not None:
+                try:
+                    if uploaded_file.name.endswith('.csv'):
+                        bulk_df = pd.read_csv(uploaded_file)
+                    else:
+                        bulk_df = pd.read_excel(uploaded_file)
+                    
+                    st.markdown("#### Preview Uploaded Data:")
+                    st.dataframe(bulk_df.head(), use_container_width=True)
+                    
+                    if st.button("Process & Import Bulk Records 🚀", type="primary"):
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        success_count = 0
+                        
+                        for _, row in bulk_df.iterrows():
+                            try:
+                                email = str(row['email']).strip().lower()
+                                name = str(row['name']).strip()
+                                role = str(row['role']).strip()
+                                emp_id = str(row['emp_id']).strip()
+                                tl_name = str(row.get('tl_name', 'Unassigned')).strip()
+                                tl_id = str(row.get('tl_id', '')).strip()
+                                raw_pass = str(row.get('password', 'Password123'))
+                                if raw_pass == 'nan' or not raw_pass:
+                                    raw_pass = 'Password123'
+                                p_hash = hash_password(raw_pass)
+                                
+                                cursor.execute("""
+                                    INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                    ON CONFLICT (email) DO UPDATE SET 
+                                        name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
+                                        tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
+                                        password_hash = EXCLUDED.password_hash
+                                """, (email, name, role, emp_id, tl_name, tl_id, p_hash))
+                                success_count += 1
+                            except Exception as row_err:
+                                continue
+                                
+                        conn.commit()
+                        conn.close()
+                        st.success(f"Successfully imported/updated {success_count} user records!")
+                        st.rerun()
+                except Exception as file_err:
+                    st.error(f"Error reading file: {file_err}")
+
         st.markdown("### 📋 Active System Users Directory")
         conn = get_connection()
         users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name FROM users", conn)
