@@ -6,7 +6,6 @@ from fpdf import FPDF
 import altair as alt
 import os
 import hashlib
-import io
 
 # ==================== AUTOMATIC LIGHT THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -40,7 +39,6 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Users table with secure password hash column
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -78,7 +76,6 @@ def init_db():
         )
     ''')
     
-    # Default users with secure default password: "Password123"
     default_pass_hash = hash_password("Password123")
     default_users = [
         ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND04737", "Nandini Puri", "TL01", default_pass_hash),
@@ -87,7 +84,6 @@ def init_db():
         ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01", default_pass_hash),
         ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02", default_pass_hash)
     ]
-    # Use DO NOTHING so manual edits in Admin panel are never overwritten on app reboot
     cursor.executemany("""
         INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
         VALUES (%s, %s, %s, %s, %s, %s, %s) 
@@ -140,6 +136,13 @@ st.markdown("""
         .stButton>button:hover {
             background: linear-gradient(135deg, #FF6B00 0%, #E05D00 100%) !important;
         }
+        .table-header {
+            font-weight: 600;
+            color: #1E3A8A;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E1DFDD;
+            margin-bottom: 12px;
+        }
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
         [data-testid="stSidebar"] {
             background-color: #FFFFFF;
@@ -147,6 +150,78 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+# ==================== MODAL DIALOGS FOR EDIT & DELETE ====================
+@st.dialog("✏️ Edit User Profile")
+def edit_user_dialog(user_dict):
+    st.markdown(f"<div style='color: #605E5C; margin-bottom: 15px;'>Updating records for: <b>{user_dict['email']}</b></div>", unsafe_allow_html=True)
+    
+    e_name = st.text_input("Full Name", value=str(user_dict['name']))
+    role_opts = ["Employee", "TL", "Admin"]
+    cur_role = str(user_dict['role'])
+    r_idx = role_opts.index(cur_role) if cur_role in role_opts else 0
+    e_role = st.selectbox("Role Assignment", options=role_opts, index=r_idx)
+    e_emp_id = st.text_input("Employee ID", value=str(user_dict['emp_id'] if user_dict['emp_id'] else ""))
+    e_tl_name = st.text_input("Team Leader Name", value=str(user_dict['tl_name'] if user_dict['tl_name'] else ""))
+    e_tl_id = st.text_input("Team Leader ID", value=str(user_dict['tl_id'] if user_dict['tl_id'] else ""))
+    
+    st.markdown("---")
+    e_pass = st.text_input("Reset Password (Optional - Leave blank to keep current)", type="password")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    if col1.button("Save Changes ✅", type="primary", use_container_width=True):
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            if e_pass:
+                new_phash = hash_password(e_pass)
+                cursor.execute("""
+                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s, password_hash = %s WHERE email = %s
+                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, new_phash, user_dict['email']))
+            else:
+                cursor.execute("""
+                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s WHERE email = %s
+                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, user_dict['email']))
+            conn.commit()
+            st.success(f"User {user_dict['email']} updated successfully!")
+            st.rerun()
+        except Exception as update_err:
+            st.error(f"Error updating user: {update_err}")
+        finally:
+            conn.close()
+            
+    if col2.button("Cancel", use_container_width=True):
+        st.rerun()
+
+@st.dialog("🗑️ Confirm Deletion")
+def delete_user_dialog(email, current_user_email):
+    st.markdown(f"""
+        <div style='background-color: #FEE2E2; padding: 15px; border-radius: 8px; border-left: 5px solid #991B1B; margin-bottom: 20px;'>
+            <h4 style='color: #991B1B; margin: 0;'>⚠️ Critical Action Warning</h4>
+            <p style='color: #7F1D1D; margin: 5px 0 0 0;'>You are about to permanently delete the profile and access for:<br><br><b>{email}</b><br><br>This action cannot be undone.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    if col1.button("Yes, Delete User 🗑️", type="primary", use_container_width=True):
+        if email == current_user_email:
+            st.error("❌ Action Blocked: You cannot delete your own active admin account!")
+        else:
+            conn = get_connection()
+            cursor = conn.cursor()
+            try:
+                cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+                conn.commit()
+                st.success(f"User deleted successfully!")
+                st.rerun()
+            except Exception as del_err:
+                st.error(f"Error deleting user: {del_err}")
+            finally:
+                conn.close()
+                
+    if col2.button("Cancel", use_container_width=True):
+        st.rerun()
 
 # ==================== SESSION STATE AUTHENTICATION ====================
 if 'authenticated' not in st.session_state:
@@ -719,9 +794,9 @@ elif st.session_state.current_view == "admin":
                     except Exception as file_err:
                         st.error(f"Error reading file: {file_err}")
 
-        # --- TAB 2: ACTIVE USERS DIRECTORY WITH ROW-LEVEL EDIT & DELETE ---
+        # --- TAB 2: ACTIVE USERS DIRECTORY DATA GRID ---
         with tab_adm2:
-            st.markdown("### 📋 Active System Users Directory & Management")
+            st.markdown("### 📋 Active System Users Directory")
             conn = get_connection()
             users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users", conn)
             conn.close()
@@ -729,57 +804,36 @@ elif st.session_state.current_view == "admin":
             if users_df.empty:
                 st.info("No users found.")
             else:
+                # Custom Table Headers
+                st.markdown("<div class='table-header'>", unsafe_allow_html=True)
+                header_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.2])
+                header_cols[0].markdown("**Name**")
+                header_cols[1].markdown("**Email**")
+                header_cols[2].markdown("**Role**")
+                header_cols[3].markdown("**Emp ID**")
+                header_cols[4].markdown("**TL Name**")
+                header_cols[5].markdown("**TL ID**")
+                header_cols[6].markdown("**Actions**")
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Table Rows
                 for idx, row in users_df.iterrows():
-                    with st.expander(f"👤 {row['name']} ({row['role']}) — {row['email']}"):
-                        with st.form(f"edit_user_row_{idx}"):
-                            col_e1, col_e2 = st.columns(2)
-                            with col_e1:
-                                ed_name = st.text_input("Full Name", value=str(row['name']), key=f"ed_name_{idx}")
-                                role_opts = ["Employee", "TL", "Admin"]
-                                cur_role = str(row['role'])
-                                r_idx = role_opts.index(cur_role) if cur_role in role_opts else 0
-                                ed_role = st.selectbox("Role Assignment", options=role_opts, index=r_idx, key=f"ed_role_{idx}")
-                                ed_emp_id = st.text_input("Employee ID", value=str(row['emp_id'] if row['emp_id'] else ""), key=f"ed_empid_{idx}")
-                            with col_e2:
-                                ed_tl_name = st.text_input("Team Leader Name", value=str(row['tl_name'] if row['tl_name'] else ""), key=f"ed_tlname_{idx}")
-                                ed_tl_id = st.text_input("Team Leader ID", value=str(row['tl_id'] if row['tl_id'] else ""), key=f"ed_tlid_{idx}")
-                                ed_pass = st.text_input("New Password (Leave blank to keep current)", type="password", key=f"ed_pass_{idx}")
-                            
-                            col_b1, col_b2 = st.columns(2)
-                            save_btn = col_b1.form_submit_button("Save Changes 💾", type="primary")
-                            del_btn = col_b2.form_submit_button("Delete User 🗑️")
-                            
-                            if save_btn:
-                                conn = get_connection()
-                                cursor = conn.cursor()
-                                try:
-                                    if ed_pass:
-                                        new_phash = hash_password(ed_pass)
-                                        cursor.execute("""
-                                            UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s, password_hash = %s WHERE email = %s
-                                        """, (ed_name, ed_role, ed_emp_id, ed_tl_name, ed_tl_id, new_phash, row['email']))
-                                    else:
-                                        cursor.execute("""
-                                            UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s WHERE email = %s
-                                        """, (ed_name, ed_role, ed_emp_id, ed_tl_name, ed_tl_id, row['email']))
-                                    conn.commit()
-                                    conn.close()
-                                    st.success(f"User {row['email']} updated successfully!")
-                                    st.rerun()
-                                except Exception as update_err:
-                                    st.error(f"Error updating user: {update_err}")
-                                    
-                            if del_btn:
-                                if row['email'] == user['email']:
-                                    st.error("❌ You cannot delete your own active admin account!")
-                                else:
-                                    conn = get_connection()
-                                    cursor = conn.cursor()
-                                    try:
-                                        cursor.execute("DELETE FROM users WHERE email = %s", (row['email'],))
-                                        conn.commit()
-                                        conn.close()
-                                        st.warning(f"User {row['email']} deleted successfully!")
-                                        st.rerun()
-                                    except Exception as del_err:
-                                        st.error(f"Error deleting user: {del_err}")
+                    row_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.2])
+                    
+                    row_cols[0].write(row['name'])
+                    row_cols[1].write(row['email'])
+                    row_cols[2].write(row['role'])
+                    row_cols[3].write(row['emp_id'])
+                    row_cols[4].write(row['tl_name'])
+                    row_cols[5].write(row['tl_id'])
+                    
+                    # Action Buttons inside a nested column for alignment
+                    act_col1, act_col2 = row_cols[6].columns(2)
+                    
+                    if act_col1.button("✏️", key=f"edit_btn_{row['email']}", help="Edit User Details"):
+                        edit_user_dialog(row.to_dict())
+                        
+                    if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
+                        delete_user_dialog(row['email'], user['email'])
+                        
+                    st.markdown("<hr style='margin: 0px; padding: 0px; border-top: 1px solid #F0F0F0;'>", unsafe_allow_html=True)
