@@ -160,15 +160,15 @@ def dispatch_otp_email(recipient_email, otp_code):
             
             html_body = f"""
             <html>
-                <body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #F4F6FB; margin: 0; padding: 20px;">
-                    <div style="max-width: 500px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border-top: 5px solid #FF6B00; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                        <h2 style="color: #0E2B5C; margin: 0 0 10px 0;">Password Reset Request</h2>
-                        <p style="color: #605E5C; font-size: 14px;">Use the following One-Time Passcode (OTP) to reset your Excitel Overtime Portal access credentials:</p>
+                <body style="font-family: 'Poppins', Arial, sans-serif; background-color: #F4F7FC; margin: 0; padding: 20px;">
+                    <div style="max-width: 500px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border-top: 5px solid #FF6B00; padding: 30px; box-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);">
+                        <h2 style="color: #1E3A8A; margin: 0 0 10px 0;">Password Reset Request</h2>
+                        <p style="color: #64748B; font-size: 14px;">Use the following One-Time Passcode (OTP) to reset your Excitel Overtime Portal access credentials:</p>
                         <div style="text-align: center; margin: 25px 0;">
                             <span style="font-size: 32px; font-weight: 800; color: #FF6B00; letter-spacing: 6px; background: #FFF4EC; padding: 10px 24px; border-radius: 8px; border: 1px dashed #FF6B00;">{otp_code}</span>
                         </div>
-                        <p style="color: #605E5C; font-size: 12px;">This code is valid for <b>10 minutes</b>. If you did not request this code, please inform your system administrator immediately.</p>
-                        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;">
+                        <p style="color: #64748B; font-size: 12px;">This code is valid for <b>10 minutes</b>. If you did not request this code, please inform your system administrator immediately.</p>
+                        <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 20px 0;">
                         <p style="color: #94A3B8; font-size: 11px; text-align: center;">Excitel Broadband Private Limited — Automated Security Protocol</p>
                     </div>
                 </body>
@@ -192,29 +192,29 @@ st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide
 
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
         
         html, body, .stApp {
-            background-color: #F4F6FB !important;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+            background-color: #F4F7FC !important;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
         }
         
         header[data-testid="stHeader"], footer, #MainMenu {
             display: none !important;
         }
 
-        /* Fixed Standard Content Width */
+        /* Fixed Standard Content Width matching employee.html max-width */
         .block-container {
             max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
             padding-top: 75px !important;
             padding-bottom: 30px !important;
-            padding-left: 20px !important;
-            padding-right: 20px !important;
+            padding-left: 25px !important;
+            padding-right: 25px !important;
         }
 
-        /* Top White Header Bar */
+        /* Top White Header Bar matching employee.html .top-header */
         .excitel-topbar {
             position: fixed;
             top: 0;
@@ -223,29 +223,27 @@ st.markdown("""
             width: 100vw;
             z-index: 9999;
             background: #FFFFFF;
-            padding: 10px 48px;
+            padding: 15px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 4px solid #FF6B00;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border-bottom: 24px solid #FF6B00;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
         .brand-cluster {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 15px;
         }
         .brand-title {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
-            color: #0E2B5C;
-            letter-spacing: -0.5px;
+            color: #1E3A8A;
             line-height: 1;
         }
         .brand-sub {
-            font-size: 11px;
-            color: #605E5C;
-            letter-spacing: 0.2px;
+            font-size: 8px;
+            color: #1E3A8A;
             margin-top: 2px;
         }
         .topbar-badge {
@@ -253,49 +251,55 @@ st.markdown("""
             color: #FFFFFF;
             font-weight: 800;
             font-size: 12px;
-            padding: 4px 14px;
+            padding: 6px 20px;
             border-radius: 20px;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
             display: inline-block;
-            text-align: center;
+            text-transform: uppercase;
         }
-
-        /* Navigation Capsule Bar */
-        .nav-capsule {
-            background: #1C377B;
-            border-radius: 35px;
-            padding: 6px 18px;
+        .user-tag {
+            color: #1E3A8A;
+            font-weight: 700;
+            font-size: 15px;
+            border-left: 2px solid #E2E8F0;
+            padding-left: 15px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 14px rgba(28, 55, 123, 0.2);
+            gap: 8px;
         }
 
-        /* Nav Capsule Button Specific Coloring */
-        div.stButton > button[key="nav_form_btn"] { background-color: #FF6B00 !important; color: #FFFFFF !important; border-radius: 20px !important; border: none !important; font-weight: 700 !important; }
-        div.stButton > button[key="nav_hist_btn"] { background-color: #2B71F2 !important; color: #FFFFFF !important; border-radius: 20px !important; border: none !important; font-weight: 700 !important; }
-        div.stButton > button[key="nav_dash_btn"] { background-color: #00B67A !important; color: #FFFFFF !important; border-radius: 20px !important; border: none !important; font-weight: 700 !important; }
-        div.stButton > button[key="nav_rep_btn"] { background-color: #8B5CF6 !important; color: #FFFFFF !important; border-radius: 20px !important; border: none !important; font-weight: 700 !important; }
-        div.stButton > button[key="nav_adm_btn"] { background-color: #EF4444 !important; color: #FFFFFF !important; border-radius: 20px !important; border: none !important; font-weight: 700 !important; }
+        /* Navigation Capsule Bar matching employee.html #navBar */
+        .nav-capsule {
+            background: #1E3A8A;
+            padding: 12px 20px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 20px rgba(30,58,138,0.15);
+        }
 
-        /* Primary Submit Buttons */
+        /* Primary Submit Buttons matching employee.html .btn-submit */
         button[kind="primary"] {
-            background: #1C377B !important;
+            background: #1E3A8A !important;
             color: #FFFFFF !important;
             border: none !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
             font-size: 14px !important;
-            font-weight: 700 !important;
-            padding: 12px 20px !important;
-            box-shadow: 0 4px 12px rgba(28, 55, 123, 0.25) !important;
+            font-weight: 600 !important;
+            padding: 14px 24px !important;
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2) !important;
             width: 100% !important;
+            font-family: 'Poppins', sans-serif !important;
         }
         button[kind="primary"]:hover {
-            background: #14285A !important;
+            background: #152A63 !important;
         }
 
-        /* High-Contrast Corporate Inputs */
+        /* High-Contrast Corporate Inputs matching employee.html input/select */
         div[data-baseweb="input"],
         div[data-baseweb="base-input"],
         div[data-testid="stTextInputRootElement"],
@@ -305,141 +309,149 @@ st.markdown("""
         div[data-testid="stDateInput"] input,
         div[data-testid="stTimeInput"] input,
         div[data-testid="stNumberInput"] input {
-            border: 1.5px solid #CBD5E1 !important;
-            border-radius: 8px !important;
-            background-color: #F8FAFD !important;
-            color: #0E2B5C !important;
-            font-size: 13.5px !important;
+            border: 2px solid #E2E8F0 !important;
+            border-radius: 12px !important;
+            background-color: #FFFFFF !important;
+            color: #334155 !important;
+            font-size: 13px !important;
             font-weight: 500 !important;
+            font-family: 'Poppins', sans-serif !important;
         }
 
         div[data-baseweb="input"]:focus-within,
         div[data-baseweb="base-input"]:focus-within,
         div[data-testid="stTextInputRootElement"]:focus-within,
         div[data-baseweb="select"] > div:focus-within {
-            border-color: #1C377B !important;
-            background-color: #FFFFFF !important;
-            box-shadow: 0 0 0 3px rgba(28, 55, 123, 0.12) !important;
+            border-color: #FF6B00 !important;
+            box-shadow: none !important;
         }
 
         div[data-testid="stWidgetLabel"] label p {
-            color: #0E2B5C !important;
+            color: #1E3A8A !important;
             font-weight: 700 !important;
-            font-size: 11.5px !important;
-            letter-spacing: 0.3px !important;
+            font-size: 11px !important;
+            letter-spacing: 0.5px !important;
             text-transform: uppercase !important;
-            margin-bottom: 2px !important;
+            margin-bottom: 8px !important;
         }
 
-        /* Clean Unified White Card Container (No Ghost Boxes) */
+        /* Workspace Card matching employee.html .card */
         .workspace-card-box {
             background: #FFFFFF;
-            border-radius: 20px;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);
             border: 1px solid #E2E8F0;
             border-top: 6px solid #FF6B00;
-            padding: 38px 46px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.04);
             margin-bottom: 25px;
         }
 
         .login-card-box {
             background: #FFFFFF;
-            border-radius: 20px;
+            border-radius: 24px;
             border: 1px solid #E2E8F0;
             border-top: 6px solid #FF6B00;
-            padding: 42px 48px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(30, 58, 138, 0.08);
             margin: 30px auto 0 auto;
-            max-width: 520px;
+            max-width: 500px;
             width: 100%;
         }
 
-        /* Bulk Upload Specific Styling */
+        /* Bulk Upload Specific Styling matching Admin.html / Admin Panel */
         .bulk-card-header {
-            font-size: 22px;
-            font-weight: 800;
-            color: #0E2B5C;
-            margin-bottom: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #1E3A8A;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 10px;
         }
         .bulk-card-text {
-            font-size: 14px;
-            color: #0E2B5C;
-            margin-bottom: 8px;
+            font-size: 13px;
+            color: #334155;
+            margin-bottom: 10px;
             line-height: 1.5;
+            font-weight: 500;
         }
         .bulk-pill {
-            background-color: #F0FDF4 !important;
-            color: #166534 !important;
-            padding: 2px 5px !important;
-            border-radius: 4px !important;
+            background-color: #D1FAE5 !important;
+            color: #065F46 !important;
+            padding: 3px 8px !important;
+            border-radius: 6px !important;
             font-family: monospace !important;
-            font-size: 13px !important;
+            font-size: 12px !important;
         }
 
-        /* Proxy Section */
+        /* Proxy Section matching employee.html .proxy-box */
         .proxy-container {
-            border: 1.5px dashed #2B71F2;
-            border-radius: 12px;
-            padding: 12px 18px;
-            background: #F8FAFD;
-            margin-bottom: 20px;
+            border: 2px dashed #3B82F6;
+            border-radius: 16px;
+            padding: 20px;
+            background: #FFFFFF;
+            margin-bottom: 25px;
         }
 
-        /* 5 Top KPI Cards */
+        /* KPI Cards matching History.html & Dashboard.html .stat */
         .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 14px;
-            margin-bottom: 22px;
+            display: flex;
+            gap: 18px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
         .kpi-box {
             background: #FFFFFF;
-            border-radius: 12px;
-            border: 1px solid #E5E9F0;
-            padding: 14px 6px;
+            padding: 20px;
+            border-radius: 16px;
+            flex: 1;
             text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            border: 1px solid #E2E8F0;
+            border-bottom: 4px solid #1E3A8A;
+            min-width: 130px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
         }
         .kpi-val {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 800;
+            color: #1E3A8A;
             line-height: 1.1;
         }
         .kpi-title {
-            font-size: 10.5px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            margin-top: 5px;
+            font-size: 11px;
+            color: #64748B;
             text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
         }
-        .kpi-navy { border-bottom: 4px solid #1C377B; color: #1C377B; }
-        .kpi-green { border-bottom: 4px solid #00B67A; color: #1C377B; }
-        .kpi-red { border-bottom: 4px solid #EF4444; color: #1C377B; }
-        .kpi-cyan { border-bottom: 4px solid #0EA5E9; color: #1C377B; }
-        .kpi-blue { border-bottom: 4px solid #2B71F2; color: #1C377B; }
+        .kpi-navy { border-bottom-color: #1E3A8A; }
+        .kpi-green { border-bottom-color: #10B981; }
+        .kpi-red { border-bottom-color: #EF4444; }
+        .kpi-amber { border-bottom-color: #F59E0B; }
+        .kpi-orange { border-bottom-color: #FF6B00; }
+        .kpi-blue { border-bottom-color: #3B82F6; }
 
         .table-header-custom {
             font-weight: 700;
-            color: #0E2B5C;
+            color: #1E3A8A;
             padding-bottom: 6px;
             border-bottom: 2px solid #E2E8F0;
             margin-bottom: 10px;
-            font-size: 12.5px;
+            font-size: 12px;
+            text-transform: uppercase;
         }
         .policy-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 12px;
-            padding: 18px 22px;
+            border-radius: 16px;
+            padding: 20px;
             margin-bottom: 16px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -447,7 +459,7 @@ st.markdown("""
 # ==================== MODAL DIALOGS ====================
 @st.dialog("✏️ Edit User Profile")
 def edit_user_dialog(user_dict):
-    st.markdown(f"<div style='color: #605E5C; margin-bottom: 15px; font-size:13px;'>Updating records for: <b>{user_dict['email']}</b></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='color: #64748B; margin-bottom: 15px; font-size:13px;'>Updating records for: <b>{user_dict['email']}</b></div>", unsafe_allow_html=True)
     
     e_name = st.text_input("Full Name", value=str(user_dict['name']))
     role_opts = ["Employee", "TL", "Admin"]
@@ -492,7 +504,7 @@ def edit_user_dialog(user_dict):
 @st.dialog("🗑️ Confirm Deletion")
 def delete_user_dialog(email, current_user_email):
     st.markdown(f"""
-        <div style='background-color: #FEE2E2; padding: 15px; border-radius: 8px; border-left: 5px solid #991B1B; margin-bottom: 20px;'>
+        <div style='background-color: #FEE2E2; padding: 15px; border-radius: 12px; border-left: 5px solid #991B1B; margin-bottom: 20px;'>
             <h4 style='color: #991B1B; margin: 0;'>⚠️ Critical Action Warning</h4>
             <p style='color: #7F1D1D; margin: 5px 0 0 0;'>You are about to permanently delete the profile and access for:<br><br><b>{email}</b><br><br>This action cannot be undone.</p>
         </div>
@@ -529,7 +541,7 @@ def email_otp_password_reset_dialog():
         st.session_state.emulated_otp_display = ""
 
     if st.session_state.reset_stage == 1:
-        st.markdown("<p style='font-size:13px; color:#605E5C;'>Enter your official email to receive a 6-digit verification code.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#64748B;'>Enter your official email to receive a 6-digit verification code.</p>", unsafe_allow_html=True)
         with st.form("req_otp_form"):
             r_email = st.text_input("Official Email ID", placeholder="testuser@dl.excitel.in")
             st.markdown("<br>", unsafe_allow_html=True)
@@ -572,7 +584,7 @@ def email_otp_password_reset_dialog():
                         release_connection(conn)
 
     elif st.session_state.reset_stage == 2:
-        st.markdown(f"<p style='font-size:13px; color:#605E5C;'>Code sent to: <b>{st.session_state.reset_target_email}</b></p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:13px; color:#64748B;'>Code sent to: <b>{st.session_state.reset_target_email}</b></p>", unsafe_allow_html=True)
         
         if st.session_state.emulated_otp_display:
             st.info(f"🧪 **Test Mode Active (No SMTP Configured Yet):**\n\nYour 6-Digit OTP is: **`{st.session_state.emulated_otp_display}`** *(Valid for 10m)*")
@@ -651,13 +663,24 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
+# Synchronize tab changes from URL query parameters
+query_tab = st.query_params.get("tab")
+if query_tab and query_tab in ["portal", "history", "dashboard", "reports", "admin", "guidelines"]:
+    if st.session_state.current_view != query_tab:
+        st.session_state.current_view = query_tab
+        st.rerun()
+
 # ==================== LOGIN GATEWAY ====================
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="excitel-topbar">
             <div class="brand-cluster">
+                <svg viewBox="0 0 100 100" width="32" height="32">
+                    <circle cx="50" cy="50" r="45" fill="#FF6B00"/>
+                    <path d="M50 20 L50 80 M20 50 L80 50 M28.7 28.7 L71.3 71.3 M28.7 71.3 L71.3 28.7" stroke="#FFF" stroke-width="8" stroke-linecap="round"/>
+                </svg>
                 <div>
-                    <div class="brand-title">✴️ Excitel</div>
+                    <div class="brand-title">Excitel</div>
                     <div class="brand-sub">The world is home</div>
                 </div>
             </div>
@@ -665,14 +688,14 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.3, 1])
+    col1, col2, col3 = st.columns([1, 1.25, 1])
     with col2:
         st.markdown("""
             <div class="login-card-box">
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-                    <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
-                    <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="font-size: 26px; font-weight: 800; color: #1E3A8A; text-transform: uppercase; letter-spacing: 1px;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                    <div style="font-size: 16px; font-weight: 700; color: #1E3A8A; margin-top: 5px;">Overtime Tracking Portal</div>
+                    <div style="font-size: 13px; color: #64748B; margin-top: 4px;">Sign in with your official Excitel credentials</div>
                 </div>
         """, unsafe_allow_html=True)
         
@@ -744,29 +767,27 @@ current_badge = PAGE_BADGE_MAP.get(st.session_state.current_view, "OT_TRACKER")
 st.markdown(f"""
     <div class="excitel-topbar">
         <div class="brand-cluster">
+            <svg viewBox="0 0 100 100" width="32" height="32">
+                <circle cx="50" cy="50" r="45" fill="#FF6B00"/>
+                <path d="M50 20 L50 80 M20 50 L80 50 M28.7 28.7 L71.3 71.3 M28.7 71.3 L71.3 28.7" stroke="#FFF" stroke-width="8" stroke-linecap="round"/>
+            </svg>
             <div>
-                <div class="brand-title">✴️ Excitel</div>
+                <div class="brand-title">Excitel</div>
                 <div class="brand-sub">The world is home</div>
             </div>
-            <div class="user-tag">👤 User: {user['name']}</div>
+            <div class="vertical-divider"></div>
+            <div class="user-tag"><i class="fas fa-user"></i> Agent: {user['name']}</div>
         </div>
-        <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="header-right">
             <div class="topbar-badge">{current_badge}</div>
-            <div id="live-clock" style="font-size: 13px; font-weight: 700; color: #0E2B5C; min-width: 175px; text-align: right;"></div>
+            <div class="datetime-display" id="live-clock">Loading...</div>
         </div>
     </div>
     <script>
         function updateClock() {{
             const now = new Date();
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
-            let hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            const timeStr = hours + ':' + minutes + ':' + seconds + ' ' + ampm;
+            const dateStr = now.toLocaleDateString('en-US', {{ month: 'short', day: 'numeric', year: 'numeric' }});
+            const timeStr = now.toLocaleTimeString('en-US', {{ hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }});
             const el = document.getElementById('live-clock');
             if (el) {{
                 el.innerText = dateStr + ' | ' + timeStr;
@@ -791,38 +812,36 @@ with ut_c3:
         st.session_state.user_name = ""
         st.rerun()
 
-# ==================== NATIVE NATIVE NAVIGATION CAPSULE (MATCHING image_2d5fd0.png) ====================
-st.markdown('<div class="nav-capsule">', unsafe_allow_html=True)
+# ==================== EXACT NAVIGATION CAPSULE ====================
+nav_tabs_html = ""
 if user['role'] == "Admin":
-    n_col = st.columns([3.4, 1.3, 1.3, 1.4, 1.3, 1.3])
-    n_col[0].markdown(f"<div style='color: #FFFFFF; font-weight: 700; font-size: 14.5px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with n_col[1]:
-        if st.button("📄 OT Form", key="nav_form_btn", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with n_col[2]:
-        if st.button("🕒 History", key="nav_hist_btn", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
-    with n_col[3]:
-        if st.button("📊 Dashboard", key="nav_dash_btn", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
-    with n_col[4]:
-        if st.button("📈 Reports", key="nav_rep_btn", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
-    with n_col[5]:
-        if st.button("👥 Admin", key="nav_adm_btn", use_container_width=True): st.session_state.current_view = "admin"; st.rerun()
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" class="nav-btn" style="background:#FF6B00;"><i class="fas fa-file-alt"></i> OT Form</a>
+        <a href="?tab=history" target="_self" class="nav-btn" style="background:#3B82F6;"><i class="fas fa-history"></i> History</a>
+        <a href="?tab=dashboard" target="_self" class="nav-btn" style="background:#10B981;"><i class="fas fa-tasks"></i> Dashboard</a>
+        <a href="?tab=reports" target="_self" class="nav-btn" style="background:#8B5CF6;"><i class="fas fa-chart-line"></i> Reports</a>
+        <a href="?tab=admin" target="_self" class="nav-btn" style="background:#EF4444;"><i class="fas fa-users-cog"></i> Admin</a>
+    """
 elif user['role'] == "TL":
-    n_col = st.columns([4.6, 1.4, 1.4, 1.4])
-    n_col[0].markdown(f"<div style='color: #FFFFFF; font-weight: 700; font-size: 14.5px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with n_col[1]:
-        if st.button("📄 OT Form", key="nav_form_btn", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with n_col[2]:
-        if st.button("📊 Dashboard", key="nav_dash_btn", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
-    with n_col[3]:
-        if st.button("📈 Reports", key="nav_rep_btn", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" class="nav-btn" style="background:#FF6B00;"><i class="fas fa-file-alt"></i> OT Form</a>
+        <a href="?tab=dashboard" target="_self" class="nav-btn" style="background:#10B981;"><i class="fas fa-tasks"></i> Dashboard</a>
+        <a href="?tab=reports" target="_self" class="nav-btn" style="background:#8B5CF6;"><i class="fas fa-chart-line"></i> Reports</a>
+    """
 else:
-    n_col = st.columns([6.2, 1.8, 1.8])
-    n_col[0].markdown(f"<div style='color: #FFFFFF; font-weight: 700; font-size: 14.5px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with n_col[1]:
-        if st.button("📄 OT Form", key="nav_form_btn", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with n_col[2]:
-        if st.button("🕒 History", key="nav_hist_btn", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" class="nav-btn" style="background:#FF6B00;"><i class="fas fa-file-alt"></i> OT Form</a>
+        <a href="?tab=history" target="_self" class="nav-btn" style="background:#3B82F6;"><i class="fas fa-history"></i> History</a>
+    """
+
+st.markdown(f"""
+    <div class="nav-capsule">
+        <span style="color: white; font-weight: 700; font-size: 13px; white-space: nowrap;"><i class="fas fa-shield-alt" style="color: #FF6B00;"></i> {user['name']} ({user['role']})</span>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            {nav_tabs_html}
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 RATES = {'Calls': 12, 'Backend': 10, 'Tickets': 12, 'Complaints': 8, 'Email': 15}
 
@@ -834,27 +853,27 @@ def color_productivity_and_status(val):
     if isinstance(val, str) and '%' in val:
         try:
             num = float(val.replace('%', ''))
-            if num >= 85.0:
-                return 'color: #00A86B; font-weight: 800;'
+            if num >= 70.0:
+                return 'color: #10B981; font-weight: 700;'
             else:
-                return 'color: #E03E3E; font-weight: 800;'
+                return 'color: #EF4444; font-weight: 700;'
         except:
             pass
     if val == 'APPROVED':
-        return 'background-color: #E6F8F0; color: #00A86B; font-weight: 800; border-radius: 14px; text-align: center;'
+        return 'background-color: #D1FAE5; color: #065F46; font-weight: 700; border-radius: 20px; text-align: center;'
     elif val == 'REJECTED':
-        return 'background-color: #FDE8E8; color: #E03E3E; font-weight: 800; border-radius: 14px; text-align: center;'
+        return 'background-color: #FEE2E2; color: #991B1B; font-weight: 700; border-radius: 20px; text-align: center;'
     elif val == 'PENDING':
-        return 'background-color: #FEF3C7; color: #D97706; font-weight: 800; border-radius: 14px; text-align: center;'
+        return 'background-color: #FEF3C7; color: #92400E; font-weight: 700; border-radius: 20px; text-align: center;'
     return ''
 
 # ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="text-align: center; margin-bottom: 24px;">
-            <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-            <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 3px;">OT Entry Portal</div>
+        <div style="text-align: center; margin-bottom: 35px;">
+            <div style="font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1E3A8A; text-transform: uppercase;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            <h2 style="color: #1E3A8A; font-weight: 700; margin: 5px 0 0 0; font-size: 20px;">OT Entry Portal</h2>
         </div>
     """, unsafe_allow_html=True)
     
@@ -863,7 +882,10 @@ if st.session_state.current_view == "portal":
     target_tl = user['tlName']
     
     if user['role'] in ["TL", "Admin"]:
-        st.markdown('<div class="proxy-container"><b>👥 SUBMIT ON BEHALF OF EMPLOYEE</b>', unsafe_allow_html=True)
+        st.markdown("""
+            <div class="proxy-container">
+                <label style="color: #1E3A8A; font-weight: 700; font-size: 11px; text-transform: uppercase; margin-bottom: 10px; display: block; letter-spacing: 0.5px;"><i class="fas fa-user-friends"></i> Submit on behalf of employee</label>
+        """, unsafe_allow_html=True)
         conn = get_connection()
         try:
             emp_df = pd.read_sql("SELECT name FROM users WHERE role = 'Employee'", conn)
@@ -885,21 +907,21 @@ if st.session_state.current_view == "portal":
 
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("EMPLOYEE NAME", value=target_name, disabled=True)
-        st.text_input("ASSIGNED TEAM LEADER & ID", value=f"{target_tl} ({user['tlId'] if user['tlId'] else '1009'})", disabled=True)
+        st.text_input("Employee Name", value=target_name, disabled=True)
+        st.text_input("Assigned Team Leader & ID", value=f"{target_tl} ({user['tlId'] if user['tlId'] else '1009'})", disabled=True)
     with col2:
-        st.text_input("EMPLOYEE ID", value=target_emp_id, disabled=True)
-        req_date = st.date_input("DATE", value=date.today())
+        st.text_input("Employee ID", value=target_emp_id, disabled=True)
+        req_date = st.date_input("Date", value=date.today())
         
     col3, col4 = st.columns(2)
     with col3:
-        shift_start = st.time_input("SHIFT START TIME", value=datetime.strptime("09:00", "%H:%M").time())
-        ot_start = st.time_input("OT START TIME", value=datetime.strptime("18:00", "%H:%M").time())
+        shift_start = st.time_input("Shift Start Time", value=datetime.strptime("09:00", "%H:%M").time())
+        ot_start = st.time_input("OT Start Time", value=datetime.strptime("18:00", "%H:%M").time())
     with col4:
-        shift_end = st.time_input("SHIFT END TIME", value=datetime.strptime("18:00", "%H:%M").time())
-        ot_end = st.time_input("OT END TIME", value=datetime.strptime("21:00", "%H:%M").time())
+        shift_end = st.time_input("Shift End Time", value=datetime.strptime("18:00", "%H:%M").time())
+        ot_end = st.time_input("OT End Time", value=datetime.strptime("21:00", "%H:%M").time())
         
-    task_type = st.selectbox("TASK TYPE", options=['Select Task...', 'Calls', 'Backend', 'Tickets', 'Complaints', 'Email'])
+    task_type = st.selectbox("Task Type", options=['Select Task...', 'Calls', 'Backend', 'Tickets', 'Complaints', 'Email'])
     
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("🚀 Submit OT Request", type="primary", use_container_width=True):
@@ -984,23 +1006,23 @@ elif st.session_state.current_view == "history":
             <div class="kpi-grid">
                 <div class="kpi-box kpi-navy">
                     <div class="kpi-val">{total_reqs}</div>
-                    <div class="kpi-title">TOTAL REQUESTS</div>
+                    <div class="kpi-title">Total Requests</div>
                 </div>
                 <div class="kpi-box kpi-green">
                     <div class="kpi-val">{approved_reqs}</div>
-                    <div class="kpi-title">APPROVED</div>
+                    <div class="kpi-title">Approved</div>
                 </div>
                 <div class="kpi-box kpi-red">
                     <div class="kpi-val">{rejected_reqs}</div>
-                    <div class="kpi-title">REJECTED</div>
-                </div>
-                <div class="kpi-box kpi-cyan">
-                    <div class="kpi-val">{approved_hours:.1f}</div>
-                    <div class="kpi-title">APPRVD HOURS</div>
+                    <div class="kpi-title">Rejected</div>
                 </div>
                 <div class="kpi-box kpi-blue">
+                    <div class="kpi-val">{approved_hours:.1f}</div>
+                    <div class="kpi-title">Apprvd Hours</div>
+                </div>
+                <div class="kpi-box kpi-orange">
                     <div class="kpi-val">₹{total_payout:.0f}</div>
-                    <div class="kpi-title">TOTAL AMOUNT</div>
+                    <div class="kpi-title">Total Amount</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -1013,9 +1035,9 @@ elif st.session_state.current_view == "history":
         display_df['amount_formatted'] = display_df['amount'].apply(lambda x: f"₹{x:.0f}")
         
         final_table = display_df[['formatted_date', 'employee_name', 'hours_str', 'task_type', 'prod_pct', 'status_upper', 'amount_formatted']].copy()
-        final_table.columns = ['DATE', 'EMPLOYEE', 'HOURS', 'TASK', 'PROD %', 'STATUS', 'AMOUNT']
+        final_table.columns = ['Date', 'Employee', 'Hours', 'Task', 'Prod %', 'Status', 'Amount']
         
-        styled_df = final_table.style.map(color_productivity_and_status, subset=['PROD %', 'STATUS'])
+        styled_df = final_table.style.map(color_productivity_and_status, subset=['Prod %', 'Status'])
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1023,9 +1045,9 @@ elif st.session_state.current_view == "history":
 elif st.session_state.current_view == "dashboard":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-            <div style="font-size:19px; font-weight:800; color:#0E2B5C;">📊 TL Approval Dashboard & Analytics</div>
-            <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+            <h2 style="color: #1E3A8A; font-weight: 700; margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-tasks" style="color:#FF6B00"></i> TL Approval Dashboard & Analytics</h2>
+            <div style="font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1E3A8A; text-transform: uppercase;">EXCIT<span style="color:#FF6B00;">EL</span></div>
         </div>
     """, unsafe_allow_html=True)
     
@@ -1041,78 +1063,88 @@ elif st.session_state.current_view == "dashboard":
     if df.empty:
         st.info("No overtime claims currently registered.")
     else:
-        total_ot_hours = df['ot_hours'].sum()
-        total_ot_cost = df[df['status'] == 'Approved']['amount'].sum()
+        total_reqs = len(df)
         pending_count = len(df[df['status'] == 'Pending'])
         approved_count = len(df[df['status'] == 'Approved'])
+        rejected_count = len(df[df['status'] == 'Rejected'])
+        total_ot_hours = df['ot_hours'].sum()
+        total_ot_cost = df[df['status'] == 'Approved']['amount'].sum()
         
         st.markdown(f"""
-            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:20px;">
-                <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
-                    <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{total_ot_hours:.1f}</div>
-                    <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">OT HOURS</div>
+            <div class="kpi-grid">
+                <div class="kpi-box kpi-navy">
+                    <div class="kpi-val">{total_reqs}</div>
+                    <div class="kpi-title">Total Requests</div>
                 </div>
-                <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
-                    <div style="font-size:24px; font-weight:800; color:#0E2B5C;">₹{total_ot_cost:.0f}</div>
-                    <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">OT COST</div>
+                <div class="kpi-box kpi-amber">
+                    <div class="kpi-val">{pending_count}</div>
+                    <div class="kpi-title">Pending</div>
                 </div>
-                <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
-                    <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{pending_count}</div>
-                    <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">PENDING</div>
+                <div class="kpi-box kpi-green">
+                    <div class="kpi-val">{approved_count}</div>
+                    <div class="kpi-title">Approved</div>
                 </div>
-                <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
-                    <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{approved_count}</div>
-                    <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">APPROVED</div>
+                <div class="kpi-box kpi-red">
+                    <div class="kpi-val">{rejected_count}</div>
+                    <div class="kpi-title">Rejected</div>
+                </div>
+                <div class="kpi-box kpi-blue">
+                    <div class="kpi-val">{total_ot_hours:.1f}</div>
+                    <div class="kpi-title">OT Hours</div>
+                </div>
+                <div class="kpi-box kpi-orange">
+                    <div class="kpi-val">₹{total_ot_cost:.0f}</div>
+                    <div class="kpi-title">OT Cost</div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
         ch1, ch2, ch3 = st.columns(3)
         with ch1:
-            st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>📊 STATUS BREAKDOWN</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:12px; font-weight:700; color:#1E3A8A; text-align:center; text-transform:uppercase;'>📊 Status Breakdown</div>", unsafe_allow_html=True)
             status_df = df['status'].value_counts().reset_index()
             status_df.columns = ['Status', 'Count']
-            pie = alt.Chart(status_df).mark_arc(innerRadius=38).encode(
+            pie = alt.Chart(status_df).mark_arc(innerRadius=50).encode(
                 theta="Count:Q",
-                color=alt.Color("Status:N", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#00B67A', '#EF4444']))
-            ).properties(height=170)
+                color=alt.Color("Status:N", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#10B981', '#EF4444']))
+            ).properties(height=180)
             st.altair_chart(pie, use_container_width=True)
             
         with ch2:
-            st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>⚡ TASK-WISE OT HOURS</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:12px; font-weight:700; color:#1E3A8A; text-align:center; text-transform:uppercase;'>⚡ Task-wise OT Hours</div>", unsafe_allow_html=True)
             task_df = df.groupby('task_type')['ot_hours'].sum().reset_index()
-            bar = alt.Chart(task_df).mark_bar(color='#1C377B', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+            bar = alt.Chart(task_df).mark_bar(color='#1E3A8A', cornerRadiusTopLeft=8, cornerRadiusTopRight=8).encode(
                 x=alt.X('task_type:N', title=None),
                 y=alt.Y('ot_hours:Q', title=None)
-            ).properties(height=170)
+            ).properties(height=180)
             st.altair_chart(bar, use_container_width=True)
             
         with ch3:
-            st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>🎯 PRODUCTIVITY COMPLIANCE</div>", unsafe_allow_html=True)
-            comp_count = len(df[df['productivity'] >= 0.70])
-            low_count = len(df[df['productivity'] < 0.70])
+            st.markdown("<div style='font-size:12px; font-weight:700; color:#1E3A8A; text-align:center; text-transform:uppercase;'>🎯 Productivity Compliance</div>", unsafe_allow_html=True)
+            comp_count = len(df[(df['status'] == 'Approved') & (df['productivity'] >= 0.70)])
+            low_count = len(df[(df['status'] == 'Approved') & (df['productivity'] < 0.70)])
             comp_df = pd.DataFrame({'Compliance': ['Compliant (≥70%)', 'Low (<70%)'], 'Count': [comp_count, low_count]})
-            comp_pie = alt.Chart(comp_df).mark_arc(innerRadius=38).encode(
+            comp_pie = alt.Chart(comp_df).mark_arc(innerRadius=50).encode(
                 theta="Count:Q",
-                color=alt.Color("Compliance:N", scale=alt.Scale(domain=['Compliant (≥70%)', 'Low (<70%)'], range=['#00B67A', '#EF4444']))
-            ).properties(height=170)
+                color=alt.Color("Compliance:N", scale=alt.Scale(domain=['Compliant (≥70%)', 'Low (<70%)'], range=['#10B981', '#EF4444']))
+            ).properties(height=180)
             st.altair_chart(comp_pie, use_container_width=True)
 
-        st.markdown("<hr style='border:none; border-top:1px solid #E5E9F0; margin:16px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:20px 0;'>", unsafe_allow_html=True)
         
         f_c1, f_c2, f_c3, f_c4, f_c5, f_c6 = st.columns(6)
         with f_c1:
-            emp_filt = st.selectbox("EMPLOYEE", options=["Select Employee"] + sorted(df['employee_name'].unique().tolist()))
+            emp_filt = st.selectbox("Employee", options=["Select Employee"] + sorted(df['employee_name'].unique().tolist()))
         with f_c2:
-            tl_filt = st.selectbox("TEAM LEADER (TL)", options=["Select TL"] + sorted(df['tl_name'].unique().tolist()))
+            tl_filt = st.selectbox("Team Leader (TL)", options=["Select TL"] + sorted(df['tl_name'].unique().tolist()))
         with f_c3:
-            task_filt = st.selectbox("TASK TYPE", options=["Select Task"] + sorted(df['task_type'].unique().tolist()))
+            task_filt = st.selectbox("Task Type", options=["Select Task"] + sorted(df['task_type'].unique().tolist()))
         with f_c4:
-            status_filt = st.selectbox("STATUS", options=["Select Status", "Pending", "Approved", "Rejected"])
+            status_filt = st.selectbox("Status", options=["Select Status", "Pending", "Approved", "Rejected"])
         with f_c5:
-            from_d = st.date_input("FROM DATE", value=date(date.today().year, date.today().month, 1))
+            from_d = st.date_input("From Date", value=date(date.today().year, date.today().month, 1))
         with f_c6:
-            to_d = st.date_input("TO DATE", value=date.today())
+            to_d = st.date_input("To Date", value=date.today())
             
         filtered_df = df.copy()
         filtered_df['date_dt'] = pd.to_datetime(filtered_df['date']).dt.date
@@ -1133,7 +1165,7 @@ elif st.session_state.current_view == "dashboard":
             for idx, p_row in pending_rows.iterrows():
                 p_c1, p_c2, p_c3, p_c4, p_c5, p_c6 = st.columns([2.5, 1.4, 1.4, 1.8, 1.4, 1.4])
                 with p_c1:
-                    st.markdown(f"**{p_row['employee_name']}**<br><span style='font-size:12px; color:#605E5C;'>{p_row['date']} | {p_row['task_type']} ({p_row['ot_hours']}h)</span>", unsafe_allow_html=True)
+                    st.markdown(f"**{p_row['employee_name']}**<br><span style='font-size:12px; color:#64748B;'>{p_row['date']} | {p_row['task_type']} ({p_row['ot_hours']}h)</span>", unsafe_allow_html=True)
                 with p_c2:
                     st.write(f"Target: **{p_row['expected_output']:.0f}**")
                 with p_c3:
@@ -1178,7 +1210,7 @@ elif st.session_state.current_view == "dashboard":
                             finally:
                                 release_connection(conn)
                             st.rerun()
-                st.markdown("<hr style='border:none; border-top:1px dashed #E5E9F0; margin:8px 0;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='border:none; border-top:1px dashed #E2E8F0; margin:10px 0;'>", unsafe_allow_html=True)
         
         d_table = filtered_df.copy()
         d_table['formatted_date'] = pd.to_datetime(d_table['date']).dt.strftime('%d-%b-%Y')
@@ -1191,9 +1223,9 @@ elif st.session_state.current_view == "dashboard":
         d_table['action_status'] = d_table['status'].apply(lambda s: "DONE" if s in ["Approved", "Rejected"] else "PENDING")
         
         master_cols = d_table[['formatted_date', 'employee_name', 'tl_name', 'task_type', 'hours_num', 'target_num', 'actual_num', 'prod_pct', 'amount_fmt', 'status_upper', 'action_status']].copy()
-        master_cols.columns = ['DATE', 'EMPLOYEE', 'TL', 'TASK', 'HOURS', 'TARGET', 'ACTUAL', 'PROD%', 'AMOUNT', 'STATUS', 'ACTION']
+        master_cols.columns = ['Date', 'Employee', 'TL', 'Task', 'Hours', 'Target', 'Actual', 'Prod%', 'Amount', 'Status', 'Action']
         
-        styled_master = master_cols.style.map(color_productivity_and_status, subset=['PROD%', 'STATUS'])
+        styled_master = master_cols.style.map(color_productivity_and_status, subset=['Prod%', 'Status'])
         st.dataframe(styled_master, use_container_width=True, hide_index=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1201,22 +1233,22 @@ elif st.session_state.current_view == "dashboard":
 elif st.session_state.current_view == "reports":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div style="font-size:19px; font-weight:800; color:#0E2B5C;">📄 Advanced Reports Engine</div>
-            <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+            <h2 style="color: #1E3A8A; font-weight: 700; margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-file-excel" style="color:#FF6B00"></i> Advanced Reports Engine</h2>
+            <div style="font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1E3A8A; text-transform: uppercase;">EXCIT<span style="color:#FF6B00;">EL</span></div>
         </div>
     """, unsafe_allow_html=True)
     
     r_col1, r_col2, r_col3, r_col4, r_col5, r_col6 = st.columns([2, 1.8, 1.8, 1.5, 1.3, 1.3])
     with r_col1:
-        report_type = st.selectbox("SELECT REPORT TYPE", options=["Monthly Summary Report", "Detailed OT Log Report"])
+        report_type = st.selectbox("Select Report Type", options=["Monthly Summary Report", "Detailed OT Log Report"])
     with r_col2:
-        filter_mode = st.selectbox("FILTER MODE", options=["Month / Year", "Custom Date Range"])
+        filter_mode = st.selectbox("Filter Mode", options=["Month / Year", "Custom Date Range"])
     with r_col3:
-        rep_month = st.selectbox("MONTH", options=["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], index=8)
+        rep_month = st.selectbox("Month", options=["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], index=8)
         month_int = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].index(rep_month) + 1
     with r_col4:
-        rep_year = st.selectbox("YEAR", options=[2025, 2026, 2027], index=1)
+        rep_year = st.selectbox("Year", options=[2025, 2026, 2027], index=1)
     with r_col5:
         st.markdown("<br>", unsafe_allow_html=True)
         gen_btn = st.button("🔍 Generate", type="primary", use_container_width=True)
@@ -1242,19 +1274,10 @@ elif st.session_state.current_view == "reports":
         tot_payout = filtered_rep[filtered_rep['status'] == 'Approved']['amount'].sum()
         
         st.markdown(f"""
-            <div style="background:#1C377B; border-radius:12px; padding:16px 20px; display:grid; grid-template-columns:repeat(3, 1fr); text-align:center; color:#FFFFFF; margin:20px 0;">
-                <div>
-                    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL EMPLOYEES</div>
-                    <div style="font-size:24px; font-weight:800; margin-top:3px;">{tot_emp}</div>
-                </div>
-                <div>
-                    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL HOURS</div>
-                    <div style="font-size:24px; font-weight:800; margin-top:3px;">{tot_hrs:.1f}</div>
-                </div>
-                <div>
-                    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL PAYOUT</div>
-                    <div style="font-size:24px; font-weight:800; margin-top:3px;">₹{tot_payout:.0f}</div>
-                </div>
+            <div style="background:linear-gradient(135deg, #1E3A8A, #0f2b6d); color: white; padding: 22px; border-radius: 16px; margin: 20px 0; display: flex; justify-content: space-around; font-weight: 600; box-shadow: 0 4px 20px rgba(30,58,138,0.1);">
+                <div style="text-align: center; font-size: 20px;"><span style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Total Employees</span>{tot_emp}</div>
+                <div style="text-align: center; font-size: 20px;"><span style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Total Hours</span>{tot_hrs:.1f}</div>
+                <div style="text-align: center; font-size: 20px;"><span style="display: block; font-size: 11px; text-transform: uppercase; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.5px;">Total Payout</span>₹{tot_payout:.0f}</div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1266,8 +1289,8 @@ elif st.session_state.current_view == "reports":
                 total_amount=('amount', 'sum')
             ).reset_index()
             
-            summary_view.columns = ['EMPLOYEE NAME', 'ID', 'OT DAYS', 'TOTAL HOURS', 'APPROVED HRS', 'AMOUNT PAID']
-            summary_view['AMOUNT PAID'] = summary_view['AMOUNT PAID'].apply(lambda x: f"₹{x:.0f}")
+            summary_view.columns = ['Employee Name', 'ID', 'OT Days', 'Total Hours', 'Approved Hrs', 'Amount Paid']
+            summary_view['Amount Paid'] = summary_view['Amount Paid'].apply(lambda x: f"₹{x:.0f}")
             st.dataframe(summary_view, use_container_width=True, hide_index=True)
             
             if export_btn:
@@ -1278,9 +1301,9 @@ elif st.session_state.current_view == "reports":
             det_view['date'] = pd.to_datetime(det_view['date']).dt.strftime('%d-%b-%Y')
             det_view['productivity'] = (det_view['productivity'] * 100).round(0).astype(int).astype(str) + '%'
             det_view['amount'] = det_view['amount'].apply(lambda x: f"₹{x:.0f}")
-            det_view.columns = ['DATE', 'EMPLOYEE NAME', 'EMP ID', 'TL NAME', 'TASK TYPE', 'OT HOURS', 'TARGET', 'ACTUAL', 'PROD %', 'STATUS', 'AMOUNT PAID']
+            det_view.columns = ['Date', 'Employee Name', 'Emp ID', 'TL Name', 'Task Type', 'OT Hours', 'Target', 'Actual', 'Prod %', 'Status', 'Amount Paid']
             
-            styled_det = det_view.style.map(color_productivity_and_status, subset=['PROD %', 'STATUS'])
+            styled_det = det_view.style.map(color_productivity_and_status, subset=['Prod %', 'Status'])
             st.dataframe(styled_det, use_container_width=True, hide_index=True)
             
             if export_btn:
@@ -1298,12 +1321,9 @@ elif st.session_state.current_view == "admin":
         st.error("Restricted to system administrators.")
     else:
         st.markdown("""
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <div>
-                    <div style="font-size:19px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
-                    <div style="font-size:12.5px; color:#605E5C; margin-top:2px;">Single creation, bulk imports, directory edits, and security audit trail</div>
-                </div>
-                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+                <h2 style="color: #1E3A8A; font-weight: 700; margin: 0; font-size: 20px; display: flex; align-items: center; gap: 10px;"><i class="fas fa-users-cog" style="color:#FF6B00"></i> User Management</h2>
+                <div style="font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1E3A8A; text-transform: uppercase;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -1433,7 +1453,7 @@ elif st.session_state.current_view == "admin":
                         edit_user_dialog(row.to_dict())
                     if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
                         delete_user_dialog(row['email'], user['email'])
-                    st.markdown("<hr style='border:none; border-top: 1px solid #F0F2F9; margin: 6px 0;'>", unsafe_allow_html=True)
+                    st.markdown("<hr style='border:none; border-top: 1px solid #E2E8F0; margin: 6px 0;'>", unsafe_allow_html=True)
 
         with tab_adm3:
             st.markdown("### 🔍 Security Audit Trail")
@@ -1454,17 +1474,17 @@ elif st.session_state.current_view == "admin":
 elif st.session_state.current_view == "guidelines":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
             <div>
-                <h2 style="margin: 0 0 4px 0; color: #0E2B5C; font-weight: 800; font-size: 20px;">📖 Portal Guidelines & Data Security Policy</h2>
-                <p style="color: #605E5C; font-size: 12.5px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
+                <h2 style="margin: 0 0 4px 0; color: #1E3A8A; font-weight: 700; font-size: 20px;">📖 Portal Guidelines & Data Security Policy</h2>
+                <p style="color: #64748B; font-size: 12.5px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
             </div>
-            <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            <div style="font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1E3A8A; text-transform: uppercase;">EXCIT<span style="color:#FF6B00;">EL</span></div>
         </div>
 
         <div class="policy-card">
-            <h3 style="color: #0E2B5C; margin-top: 0; font-size: 15px;">1. How to Apply & Workflow Guidelines</h3>
-            <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
+            <h3 style="color: #1E3A8A; margin-top: 0; font-size: 15px;">1. How to Apply & Workflow Guidelines</h3>
+            <ul style="color: #334155; font-size: 13px; line-height: 1.6;">
                 <li><b>Employees:</b> Log in using your assigned official email credentials. Navigate to the <b>OT Form</b> tab, verify your shift timings, select your task category, and submit your overtime duration. Review past records in the <b>History</b> tab.</li>
                 <li><b>Team Leaders (TL):</b> Monitor pending overtime submissions under the <b>Dashboard</b> tab. Verify actual units produced against the standard expected output target, and issue approvals or rejections accordingly. TLs may submit proxy requests for team members via the Form tab.</li>
                 <li><b>Overtime Calculation:</b> Standard verified payouts are computed based on operational output targets and verified hours. Weekend and weekday rates follow the standardized enterprise rate card.</li>
@@ -1472,8 +1492,8 @@ elif st.session_state.current_view == "guidelines":
         </div>
 
         <div class="policy-card">
-            <h3 style="color: #0E2B5C; margin-top: 0; font-size: 15px;">2. Operational Limits & Threshold Rules</h3>
-            <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
+            <h3 style="color: #1E3A8A; margin-top: 0; font-size: 15px;">2. Operational Limits & Threshold Rules</h3>
+            <ul style="color: #334155; font-size: 13px; line-height: 1.6;">
                 <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
                 <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
                 <li><b>Submission Window:</b> Claims must be entered within <b>48 hours</b> of shift completion. Older dates are locked out.</li>
@@ -1484,7 +1504,7 @@ elif st.session_state.current_view == "guidelines":
 
         <div class="policy-card" style="border-left: 5px solid #991B1B;">
             <h3 style="color: #991B1B; margin-top: 0; font-size: 15px;">3. Data Security & Anti-Falsification Policy</h3>
-            <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
+            <ul style="color: #334155; font-size: 13.5px; line-height: 1.6;">
                 <li><b>Strict Prohibition of False Records:</b> Logging fabricated overtime hours, inflating output units, or misrepresenting timings is strictly prohibited and constitutes a direct breach of employment conduct.</li>
                 <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system audit database.</li>
                 <li><b>Self-Approval Prohibition:</b> Supervisors and managers cannot approve their own overtime claims.</li>
@@ -1508,7 +1528,7 @@ with footer_col2:
         st.rerun()
 
 st.markdown("""
-    <div style="text-align:center; padding:12px 0 25px 0; color:#605E5C; font-size:12px; font-weight:600;">
+    <div style="text-align:center; padding:12px 0 25px 0; color:#64748B; font-size:12px; font-weight:600;">
         © Excitel Broadband Private Limited — Enterprise Overtime Tracking Protocol
     </div>
 """, unsafe_allow_html=True)
