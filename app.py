@@ -208,7 +208,7 @@ st.markdown("""
             max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding-top: 80px !important;
+            padding-top: 90px !important;
             padding-bottom: 30px !important;
             padding-left: 20px !important;
             padding-right: 20px !important;
@@ -653,13 +653,13 @@ if not st.session_state.authenticated:
 
     col1, col2, col3 = st.columns([1, 1.35, 1])
     with col2:
-        st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-                <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
-                <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
-            </div>
+            <div class="workspace-card-box">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
+                    <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
+                </div>
         """, unsafe_allow_html=True)
         
         with st.form("login_form", clear_on_submit=True):
