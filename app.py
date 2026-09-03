@@ -432,13 +432,6 @@ def highlight_status(val):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
     return ''
 
-def apply_status_style(styler):
-    """Safely applies status coloring across pandas versions."""
-    if hasattr(styler, 'map'):
-        return styler.map(highlight_status, subset=['status'])
-    else:
-        return styler.applymap(highlight_status, subset=['status'])
-
 # ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
@@ -558,7 +551,7 @@ elif st.session_state.current_view == "history":
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📋 My Overtime History</h2>
-                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Review your submitted overtime records and payout summaries.</p>
+                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Review your submitted overtime records, verification statuses, and payout summaries.</p>
                     </div>
                     <div class="brand-logo">EXCIT<span>EL</span></div>
                 </div>
@@ -594,8 +587,31 @@ elif st.session_state.current_view == "history":
             c2.metric("Approved Payable Hours", f"{app_hrs:.1f} hrs")
             c3.metric("Filtered Payout Amount", f"₹{total_amt:.0f}")
             
-            styled_history = apply_status_style(filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style)
-            st.dataframe(styled_history, use_container_width=True)
+            # Formatted presentation DataFrame
+            history_display = filtered_history[['date', 'ot_hours', 'task_type', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
+            history_display.rename(columns={
+                'date': 'Date',
+                'ot_hours': 'OT Hours',
+                'task_type': 'Task Type',
+                'expected_output': 'Target Output',
+                'actual_output': 'Actual Output',
+                'productivity': 'Productivity',
+                'status': 'Status',
+                'amount': 'Payout Amount'
+            }, inplace=True)
+            
+            styled_history = (
+                history_display.style
+                .map(highlight_status, subset=['Status'])
+                .format({
+                    'OT Hours': '{:.1f} hrs',
+                    'Target Output': '{:.0f}',
+                    'Actual Output': '{:.0f}',
+                    'Productivity': '{:.0%}',
+                    'Payout Amount': '₹{:.0f}'
+                })
+            )
+            st.dataframe(styled_history, use_container_width=True, hide_index=True)
 
 # ==================== 3. APPROVAL DASHBOARD ====================
 elif st.session_state.current_view == "dashboard":
@@ -656,6 +672,7 @@ elif st.session_state.current_view == "dashboard":
                 else:
                     st.info("No approved payout trends to graph yet.")
 
+            # Batch Approvals Section
             st.markdown("### ⚡ Batch Approval Action")
             pending_df = df[df['status'] == 'Pending']
             
@@ -672,7 +689,7 @@ elif st.session_state.current_view == "dashboard":
                             if chk:
                                 selected_ids.append(r)
                         with col_det:
-                            st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Expected: {r['expected_output']}")
+                            st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Expected Output: {r['expected_output']}")
                     
                     if selected_ids:
                         if st.button(f"Approve Selected ({len(selected_ids)}) ✅", type="primary"):
@@ -732,7 +749,12 @@ elif st.session_state.current_view == "dashboard":
                             if col_btn2.button("Reject ❌", key=f"rej_{row['id']}"):
                                 conn = get_connection()
                                 cursor = conn.cursor()
-                                cursor.execute("UPDATE ot_logs SET status = 'Rejected', approved_by = %s, approved_at = %s WHERE id = %s", (user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                                # Record entered actual_output permanently even when rejected
+                                cursor.execute("""
+                                    UPDATE ot_logs 
+                                    SET status = 'Rejected', actual_output = %s, productivity = 0, verified_hours = 0, amount = 0, approved_by = %s, approved_at = %s 
+                                    WHERE id = %s
+                                """, (actual_out, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
                                 cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
                                 emp_mail = cursor.fetchone()
                                 conn.commit()
@@ -744,8 +766,28 @@ elif st.session_state.current_view == "dashboard":
                                 st.rerun()
 
             st.markdown("### 📋 All Request Logs")
-            styled_all_df = apply_status_style(df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style)
-            st.dataframe(styled_all_df, use_container_width=True)
+            dashboard_display = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].copy()
+            dashboard_display.rename(columns={
+                'date': 'Date',
+                'employee_name': 'Employee Name',
+                'tl_name': 'Team Leader',
+                'task_type': 'Task Type',
+                'ot_hours': 'OT Hours',
+                'actual_output': 'Actual Output',
+                'status': 'Status',
+                'amount': 'Payout Amount'
+            }, inplace=True)
+            
+            styled_all_df = (
+                dashboard_display.style
+                .map(highlight_status, subset=['Status'])
+                .format({
+                    'OT Hours': '{:.1f} hrs',
+                    'Actual Output': '{:.0f}',
+                    'Payout Amount': '₹{:.0f}'
+                })
+            )
+            st.dataframe(styled_all_df, use_container_width=True, hide_index=True)
 
 # ==================== 4. REPORTS ENGINE ====================
 elif st.session_state.current_view == "reports":
@@ -797,14 +839,54 @@ elif st.session_state.current_view == "reports":
                 ).reset_index()
                 
                 st.metric("Total Monthly Payout", f"₹{summary_df['total_amount'].sum():.0f}")
-                st.dataframe(summary_df, use_container_width=True)
                 
-                csv = summary_df.to_csv(index=False).encode('utf-8')
+                summary_display = summary_df.copy()
+                summary_display.rename(columns={
+                    'employee_name': 'Employee Name',
+                    'emp_id': 'Employee ID',
+                    'ot_days': 'Total Days Worked',
+                    'total_hours': 'Total Hours Requested',
+                    'approved_hours': 'Approved Hours',
+                    'total_amount': 'Total Payout'
+                }, inplace=True)
+                
+                styled_summary = (
+                    summary_display.style
+                    .format({
+                        'Total Hours Requested': '{:.1f} hrs',
+                        'Approved Hours': '{:.1f} hrs',
+                        'Total Payout': '₹{:.0f}'
+                    })
+                )
+                st.dataframe(styled_summary, use_container_width=True, hide_index=True)
+                
+                csv = summary_display.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
             else:
-                styled_report_df = apply_status_style(filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']].style)
-                st.dataframe(styled_report_df, use_container_width=True)
-                csv = filtered_df.to_csv(index=False).encode('utf-8')
+                detailed_display = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].copy()
+                detailed_display.rename(columns={
+                    'date': 'Date',
+                    'employee_name': 'Employee Name',
+                    'emp_id': 'Employee ID',
+                    'tl_name': 'Team Leader',
+                    'task_type': 'Task Type',
+                    'ot_hours': 'OT Hours',
+                    'actual_output': 'Actual Output',
+                    'status': 'Status',
+                    'amount': 'Payout Amount'
+                }, inplace=True)
+                
+                styled_report_df = (
+                    detailed_display.style
+                    .map(highlight_status, subset=['Status'])
+                    .format({
+                        'OT Hours': '{:.1f} hrs',
+                        'Actual Output': '{:.0f}',
+                        'Payout Amount': '₹{:.0f}'
+                    })
+                )
+                st.dataframe(styled_report_df, use_container_width=True, hide_index=True)
+                csv = detailed_display.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "detailed_ot_log.csv", "text/csv")
         else:
             st.info("No records found.")
