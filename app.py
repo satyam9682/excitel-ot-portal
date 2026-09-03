@@ -208,7 +208,7 @@ st.markdown("""
             max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding-top: 90px !important;
+            padding-top: 80px !important;
             padding-bottom: 30px !important;
             padding-left: 20px !important;
             padding-right: 20px !important;
@@ -329,7 +329,19 @@ st.markdown("""
             margin-bottom: 2px !important;
         }
 
-        /* Clean Unified White Card Container (No Ghost Boxes) */
+        /* Broad, Normal-Sized Unified White Card Container */
+        .login-card-box {
+            background: #FFFFFF;
+            border-radius: 20px;
+            border: 1px solid #E2E8F0;
+            border-top: 6px solid #FF6B00;
+            padding: 44px 54px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            margin: 30px auto 0 auto;
+            max-width: 560px;
+            width: 100%;
+        }
+
         .workspace-card-box {
             background: #FFFFFF;
             border-radius: 20px;
@@ -637,7 +649,7 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY (FULLY UNIFIED & CLEAN) ====================
+# ==================== LOGIN GATEWAY (BROAD & NORMAL SIZED) ====================
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="excitel-topbar">
@@ -651,54 +663,52 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.35, 1])
-    with col2:
-        st.markdown("""
-            <div class="workspace-card-box">
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-                    <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
-                    <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
-                </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("login_form", clear_on_submit=True):
-            login_email = st.text_input("Official Email ID", placeholder="e.g. testuser@dl.excitel.in")
-            login_password = st.text_input("Password", type="password", placeholder="••••••••••••")
-            st.markdown("<br>", unsafe_allow_html=True)
-            submit_login = st.form_submit_button("Sign In 🔐", type="primary", use_container_width=True)
-
-            if submit_login:
-                if not login_email or not login_password:
-                    st.error("Please enter both email and password.")
-                else:
-                    conn = get_connection()
-                    try:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
-                        res = cursor.fetchone()
-                    finally:
-                        release_connection(conn)
-
-                    if res:
-                        db_name, db_role, db_pass_hash = res
-                        if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
-                            st.session_state.authenticated = True
-                            st.session_state.user_email = login_email.strip().lower()
-                            st.session_state.user_name = db_name
-                            st.session_state.user_role = db_role
-                            st.session_state.current_view = "portal"
-                            record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
-                            st.rerun()
-                        else:
-                            st.error("❌ Incorrect password.")
-                    else:
-                        st.error("❌ Email not registered in the system.")
-
+    st.markdown("""
+        <div class="login-card-box">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
+                <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
+            </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("login_form", clear_on_submit=True):
+        login_email = st.text_input("Official Email ID", placeholder="e.g. testuser@dl.excitel.in")
+        login_password = st.text_input("Password", type="password", placeholder="••••••••••••")
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🔑 Forgot / Change Password via Email OTP", use_container_width=True):
-            email_otp_password_reset_dialog()
-        st.markdown('</div>', unsafe_allow_html=True)
+        submit_login = st.form_submit_button("Sign In 🔐", type="primary", use_container_width=True)
+
+        if submit_login:
+            if not login_email or not login_password:
+                st.error("Please enter both email and password.")
+            else:
+                conn = get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
+                    res = cursor.fetchone()
+                finally:
+                    release_connection(conn)
+
+                if res:
+                    db_name, db_role, db_pass_hash = res
+                    if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
+                        st.session_state.authenticated = True
+                        st.session_state.user_email = login_email.strip().lower()
+                        st.session_state.user_name = db_name
+                        st.session_state.user_role = db_role
+                        st.session_state.current_view = "portal"
+                        record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
+                        st.rerun()
+                    else:
+                        st.error("❌ Incorrect password.")
+                else:
+                    st.error("❌ Email not registered in the system.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🔑 Forgot / Change Password via Email OTP", use_container_width=True):
+        email_otp_password_reset_dialog()
+    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==================== FETCH LOGGED-IN USER ====================
