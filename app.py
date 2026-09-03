@@ -1,5 +1,6 @@
 import streamlit as st
 import psycopg2
+from psycopg2 import pool
 import pandas as pd
 from datetime import datetime, date, timedelta
 from fpdf import FPDF
@@ -23,101 +24,150 @@ textColor="#201F1E"
 font="sans serif"
 """)
 
-# ==================== DATABASE SETUP ====================
-def get_connection():
+# ==================== DATABASE CONNECTION POOLING ====================
+@st.cache_resource
+def get_db_pool():
     db_url = st.secrets["database"]["url"]
-    try:
-        return psycopg2.connect(db_url)
-    except Exception as e:
-        st.error(f"🚨 Detailed DB Error: {e}")
-        raise e
+    return psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=10, dsn=db_url)
+
+def get_connection():
+    pool_conn = get_db_pool()
+    return pool_conn.getconn()
+
+def release_connection(conn):
+    if conn:
+        get_db_pool().putconn(conn)
+
+# ==================== CRYPTOGRAPHIC UTILITIES ====================
+SALT_SECRET = "Excitel_Secure_Salt_2026"
 
 def hash_password(password):
-    """Securely hash passwords using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """HMAC Salted PBKDF2 Password Hashing with 100,000 iterations"""
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        SALT_SECRET.encode('utf-8'),
+        100000
+    ).hex()
 
+# ==================== DATABASE SCHEMA & INITIALIZATION ====================
 def init_db():
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            email TEXT PRIMARY KEY,
-            name TEXT,
-            role TEXT,
-            emp_id TEXT,
-            tl_name TEXT,
-            tl_id TEXT,
-            password_hash TEXT
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS ot_logs (
-            id SERIAL PRIMARY KEY,
-            date TEXT,
-            employee_name TEXT,
-            emp_id TEXT,
-            shift_start TEXT,
-            shift_end TEXT,
-            ot_start TEXT,
-            ot_end TEXT,
-            ot_hours REAL,
-            task_type TEXT,
-            status TEXT,
-            tl_name TEXT,
-            actual_output REAL,
-            standard_rate REAL,
-            expected_output REAL,
-            productivity REAL,
-            verified_hours REAL,
-            amount REAL,
-            approved_by TEXT,
-            approved_at TEXT
-        )
-    ''')
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS notifications (
-            id SERIAL PRIMARY KEY,
-            recipient_email TEXT,
-            message TEXT,
-            created_at TEXT,
-            is_read BOOLEAN DEFAULT FALSE
-        )
-    ''')
-    
-    default_pass_hash = hash_password("Password123")
-    default_users = [
-        ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND04737", "Nandini Puri", "TL01", default_pass_hash),
-        ("ritu.mandal@dl.excitel.in", "Ritu Mandal", "TL", "EBND04635", "Nandini Puri", "TL01", default_pass_hash),
-        ("jamal.khan@dl.excitel.in", "Jamal Khan", "TL", "EBND04471", "Nandini Puri", "TL01", default_pass_hash),
-        ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01", default_pass_hash),
-        ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02", default_pass_hash)
-    ]
-    cursor.executemany("""
-        INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s) 
-        ON CONFLICT (email) DO NOTHING
-    """, default_users)
+    try:
+        cursor = conn.cursor()
         
-    conn.commit()
-    conn.close()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                email TEXT PRIMARY KEY,
+                name TEXT,
+                role TEXT,
+                emp_id TEXT,
+                tl_name TEXT,
+                tl_id TEXT,
+                password_hash TEXT
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ot_logs (
+                id SERIAL PRIMARY KEY,
+                date TEXT,
+                employee_name TEXT,
+                emp_id TEXT,
+                shift_start TEXT,
+                shift_end TEXT,
+                ot_start TEXT,
+                ot_end TEXT,
+                ot_hours REAL,
+                task_type TEXT,
+                status TEXT,
+                tl_name TEXT,
+                actual_output REAL,
+                standard_rate REAL,
+                expected_output REAL,
+                productivity REAL,
+                verified_hours REAL,
+                amount REAL,
+                approved_by TEXT,
+                approved_at TEXT,
+                rejection_reason TEXT DEFAULT ''
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                recipient_email TEXT,
+                message TEXT,
+                created_at TEXT,
+                is_read BOOLEAN DEFAULT FALSE
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS audit_logs (
+                id SERIAL PRIMARY KEY,
+                performer TEXT,
+                action TEXT,
+                target TEXT,
+                timestamp TEXT,
+                details TEXT
+            )
+        ''')
+
+        # Add rejection_reason column if migrating from older versions
+        cursor.execute("""
+            ALTER TABLE ot_logs 
+            ADD COLUMN IF NOT EXISTS rejection_reason TEXT DEFAULT '';
+        """)
+        
+        default_pass_hash = hash_password("Password123")
+        default_users = [
+            ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND04737", "Nandini Puri", "TL01", default_pass_hash),
+            ("ritu.mandal@dl.excitel.in", "Ritu Mandal", "TL", "EBND04635", "Nandini Puri", "TL01", default_pass_hash),
+            ("jamal.khan@dl.excitel.in", "Jamal Khan", "TL", "EBND04471", "Nandini Puri", "TL01", default_pass_hash),
+            ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01", default_pass_hash),
+            ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02", default_pass_hash)
+        ]
+        cursor.executemany("""
+            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s) 
+            ON CONFLICT (email) DO NOTHING
+        """, default_users)
+            
+        conn.commit()
+    finally:
+        release_connection(conn)
 
 init_db()
 
-def send_notification(recipient_email, message):
+def record_audit(performer, action, target, details=""):
+    conn = get_connection()
     try:
-        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO audit_logs (performer, action, target, timestamp, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (performer, action, target, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), details))
+        conn.commit()
+    except Exception as e:
+        print(f"Audit Log Error: {e}")
+    finally:
+        release_connection(conn)
+
+def send_notification(recipient_email, message):
+    conn = get_connection()
+    try:
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO notifications (recipient_email, message, created_at) VALUES (%s, %s, %s)",
             (recipient_email.lower().strip(), message, datetime.now().strftime("%Y-%m-%d %H:%M"))
         )
         conn.commit()
-        conn.close()
     except Exception as e:
         print(f"Notification Error: {e}")
+    finally:
+        release_connection(conn)
 
 # ==================== PAGE CONFIG & STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
@@ -200,7 +250,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==================== SESSION TIMEOUT LOGIC ====================
-INACTIVITY_TIMEOUT_SECONDS = 1800
+INACTIVITY_TIMEOUT_SECONDS = 1800  # 30 Minutes
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -245,24 +295,26 @@ def edit_user_dialog(user_dict):
     col1, col2 = st.columns(2)
     if col1.button("Save Changes ✅", type="primary", use_container_width=True):
         conn = get_connection()
-        cursor = conn.cursor()
         try:
+            cursor = conn.cursor()
             if e_pass:
                 new_phash = hash_password(e_pass)
                 cursor.execute("""
                     UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s, password_hash = %s WHERE email = %s
                 """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, new_phash, user_dict['email']))
+                record_audit(st.session_state.user_email, "EDIT_USER_PASSWORD", user_dict['email'], f"Updated role to {e_role}")
             else:
                 cursor.execute("""
                     UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s WHERE email = %s
                 """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, user_dict['email']))
+                record_audit(st.session_state.user_email, "EDIT_USER", user_dict['email'], f"Updated role to {e_role}")
             conn.commit()
             st.success(f"User {user_dict['email']} updated successfully!")
             st.rerun()
         except Exception as update_err:
             st.error(f"Error updating user: {update_err}")
         finally:
-            conn.close()
+            release_connection(conn)
             
     if col2.button("Cancel", use_container_width=True):
         st.rerun()
@@ -282,16 +334,17 @@ def delete_user_dialog(email, current_user_email):
             st.error("❌ Action Blocked: You cannot delete your own active admin account!")
         else:
             conn = get_connection()
-            cursor = conn.cursor()
             try:
+                cursor = conn.cursor()
                 cursor.execute("DELETE FROM users WHERE email = %s", (email,))
                 conn.commit()
+                record_audit(current_user_email, "DELETE_USER", email, "Permanent deletion")
                 st.success("User deleted successfully!")
                 st.rerun()
             except Exception as del_err:
                 st.error(f"Error deleting user: {del_err}")
             finally:
-                conn.close()
+                release_connection(conn)
                 
     if col2.button("Cancel", use_container_width=True):
         st.rerun()
@@ -319,20 +372,24 @@ if not st.session_state.authenticated:
                     st.error("Please enter both email and password.")
                 else:
                     conn = get_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
-                    res = cursor.fetchone()
-                    conn.close()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
+                        res = cursor.fetchone()
+                    finally:
+                        release_connection(conn)
                     
                     if res:
                         db_name, db_role, db_pass_hash = res
-                        if db_pass_hash == hash_password(login_password):
+                        # Backward compatible: matches PBKDF2 or standard SHA-256 legacy
+                        if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
                             st.session_state.authenticated = True
                             st.session_state.user_email = login_email.strip().lower()
                             st.session_state.user_name = db_name
                             st.session_state.user_role = db_role
                             st.session_state.last_activity = time.time()
                             st.session_state.current_view = "portal"
+                            record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
                             st.success("Login successful! Loading portal...")
                             st.rerun()
                         else:
@@ -344,12 +401,14 @@ if not st.session_state.authenticated:
 # ==================== FETCH LOGGED-IN USER DETAILS ====================
 def get_logged_in_user():
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT email, name, role, emp_id, tl_name, tl_id FROM users WHERE email = %s", (st.session_state.user_email,))
-    res = cursor.fetchone()
-    conn.close()
-    if res:
-        return {"email": res[0], "name": res[1], "role": res[2], "empId": res[3], "tlName": res[4], "tlId": res[5]}
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT email, name, role, emp_id, tl_name, tl_id FROM users WHERE email = %s", (st.session_state.user_email,))
+        res = cursor.fetchone()
+        if res:
+            return {"email": res[0], "name": res[1], "role": res[2], "empId": res[3], "tlName": res[4], "tlId": res[5]}
+    finally:
+        release_connection(conn)
     return {"email": st.session_state.user_email, "name": st.session_state.user_name, "role": st.session_state.user_role, "empId": "N/A", "tlName": "Unassigned", "tlId": ""}
 
 user = get_logged_in_user()
@@ -361,8 +420,15 @@ st.sidebar.markdown(f"**Role:** `{user['role']}`")
 
 st.sidebar.markdown("---")
 conn = get_connection()
-notifs_df = pd.read_sql("SELECT message, created_at FROM notifications WHERE recipient_email = %s ORDER BY id DESC LIMIT 5", conn, params=(user['email'],))
-conn.close()
+try:
+    notifs_df = pd.read_sql("SELECT message, created_at FROM notifications WHERE recipient_email = %s ORDER BY id DESC LIMIT 5", conn, params=(user['email'],))
+    # Query pending counts for live dashboard badge
+    if user['role'] == 'TL':
+        pending_count = pd.read_sql("SELECT COUNT(*) FROM ot_logs WHERE tl_name = %s AND status = 'Pending'", conn, params=(user['name'],)).iloc[0, 0]
+    else:
+        pending_count = pd.read_sql("SELECT COUNT(*) FROM ot_logs WHERE status = 'Pending'", conn).iloc[0, 0]
+finally:
+    release_connection(conn)
 
 with st.sidebar.expander(f"🔔 Alerts & Notifications ({len(notifs_df)})", expanded=not notifs_df.empty):
     if notifs_df.empty:
@@ -373,6 +439,7 @@ with st.sidebar.expander(f"🔔 Alerts & Notifications ({len(notifs_df)})", expa
 
 st.sidebar.markdown("---")
 if st.sidebar.button("🚪 Sign Out", use_container_width=True):
+    record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
     st.session_state.authenticated = False
     st.session_state.user_email = ""
     st.session_state.user_role = ""
@@ -381,7 +448,7 @@ if st.sidebar.button("🚪 Sign Out", use_container_width=True):
 
 st.sidebar.caption("⏱️ Session timeout: 30m idle")
 
-# ==================== NAVIGATION BAR ====================
+# ==================== LIVE TAB BADGE NAVIGATION ====================
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 nav_cols = st.columns(5)
@@ -399,7 +466,8 @@ if user['role'] in ["Employee", "Admin"]:
 
 if user['role'] in ["TL", "Admin"]:
     with nav_cols[2]:
-        if st.button("📊 Dashboard", use_container_width=True):
+        dash_label = f"📊 Dashboard ({pending_count})" if pending_count > 0 else "📊 Dashboard"
+        if st.button(dash_label, use_container_width=True):
             st.session_state.current_view = "dashboard"
             st.rerun()
 
@@ -453,17 +521,21 @@ if st.session_state.current_view == "portal":
     if user['role'] in ["TL", "Admin"]:
         st.markdown("### 🛡️ Submit on Behalf of Employee (Proxy)")
         conn = get_connection()
-        emp_df = pd.read_sql("SELECT name FROM users WHERE role = 'Employee'", conn)
-        conn.close()
+        try:
+            emp_df = pd.read_sql("SELECT name FROM users WHERE role = 'Employee'", conn)
+        finally:
+            release_connection(conn)
         selected_proxy = st.selectbox("Select Employee:", options=["Select Employee..."] + emp_df['name'].tolist())
         if selected_proxy != "Select Employee...":
             conn = get_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT name, emp_id, tl_name FROM users WHERE name = %s", (selected_proxy,))
-            p_res = cursor.fetchone()
-            conn.close()
-            if p_res:
-                target_name, target_emp_id, target_tl = p_res
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name, emp_id, tl_name FROM users WHERE name = %s", (selected_proxy,))
+                p_res = cursor.fetchone()
+                if p_res:
+                    target_name, target_emp_id, target_tl = p_res
+            finally:
+                release_connection(conn)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -495,7 +567,12 @@ if st.session_state.current_view == "portal":
         ot_hours = (o_end_min - o_start_min) / 60.0
         req_date_str = req_date.strftime("%Y-%m-%d")
         
-        if max(s_start_min, o_start_min) < min(s_end_min, o_end_min):
+        # Retroactive Cutoff Check: Max 48 hours back allowed
+        earliest_allowed = date.today() - timedelta(days=2)
+        
+        if req_date < earliest_allowed:
+            st.error(f"❌ Submission Lockout: Overtime claims older than 48 hours ({earliest_allowed.strftime('%d-%b-%Y')}) cannot be logged.")
+        elif max(s_start_min, o_start_min) < min(s_end_min, o_end_min):
             st.error("❌ Overtime hours cannot overlap regular shift timings.")
         elif ot_hours <= 0:
             st.error("❌ OT End time must be after Start time.")
@@ -503,43 +580,44 @@ if st.session_state.current_view == "portal":
             st.error(f"❌ Policy Violation: Overtime cannot exceed 3.0 hours in a single day (Requested: {ot_hours:.1f} hrs).")
         else:
             conn = get_connection()
-            daily_check = pd.read_sql("SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date = %s AND status != 'Rejected'", conn, params=(target_name, req_date_str))
-            existing_daily = daily_check['ot_hours'].sum()
-            
-            week_start = req_date - timedelta(days=req_date.weekday())
-            week_end = week_start + timedelta(days=6)
-            weekly_check = pd.read_sql(
-                "SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date >= %s AND date <= %s AND status != 'Rejected'", 
-                conn, 
-                params=(target_name, week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))
-            )
-            existing_weekly = weekly_check['ot_hours'].sum()
-            
-            if existing_daily + ot_hours > 3.0:
-                conn.close()
-                st.error(f"❌ Daily Limit Exceeded: You already have {existing_daily:.1f} hrs logged on {req_date_str}. Adding {ot_hours:.1f} hrs exceeds the 3.0h daily limit.")
-            elif existing_weekly + ot_hours > 12.0:
-                conn.close()
-                st.error(f"❌ Weekly Limit Exceeded: You have {existing_weekly:.1f} hrs logged this week. Adding {ot_hours:.1f} hrs exceeds the 12.0h weekly limit.")
-            else:
-                std_rate = RATES.get(task_type, 12)
-                expected_out = ot_hours * std_rate
+            try:
+                daily_check = pd.read_sql("SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date = %s AND status != 'Rejected'", conn, params=(target_name, req_date_str))
+                existing_daily = daily_check['ot_hours'].sum()
                 
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, 0, 0, 0, '', '')
-                """, (req_date_str, target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
+                week_start = req_date - timedelta(days=req_date.weekday())
+                week_end = week_start + timedelta(days=6)
+                weekly_check = pd.read_sql(
+                    "SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date >= %s AND date <= %s AND status != 'Rejected'", 
+                    conn, 
+                    params=(target_name, week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))
+                )
+                existing_weekly = weekly_check['ot_hours'].sum()
                 
-                cursor.execute("SELECT email FROM users WHERE name = %s", (target_tl,))
-                tl_email_res = cursor.fetchone()
-                conn.commit()
-                conn.close()
-                
-                if tl_email_res:
-                    send_notification(tl_email_res[0], f"📥 New OT Request: {target_name} logged {ot_hours}h for {req_date_str} ({task_type}).")
-                
-                st.success(f"✅ OT successfully requested for {target_name} ({ot_hours} hrs)!")
+                if existing_daily + ot_hours > 3.0:
+                    st.error(f"❌ Daily Limit Exceeded: You already have {existing_daily:.1f} hrs logged on {req_date_str}. Adding {ot_hours:.1f} hrs exceeds the 3.0h daily limit.")
+                elif existing_weekly + ot_hours > 12.0:
+                    st.error(f"❌ Weekly Limit Exceeded: You have {existing_weekly:.1f} hrs logged this week. Adding {ot_hours:.1f} hrs exceeds the 12.0h weekly limit.")
+                else:
+                    std_rate = RATES.get(task_type, 12)
+                    expected_out = ot_hours * std_rate
+                    
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at, rejection_reason)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, 0, 0, 0, '', '', '')
+                    """, (req_date_str, target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
+                    
+                    cursor.execute("SELECT email FROM users WHERE name = %s", (target_tl,))
+                    tl_email_res = cursor.fetchone()
+                    conn.commit()
+                    
+                    record_audit(user['email'], "SUBMIT_OT", target_name, f"Submitted {ot_hours}h for {req_date_str}")
+                    if tl_email_res:
+                        send_notification(tl_email_res[0], f"📥 New OT Request: {target_name} logged {ot_hours}h for {req_date_str} ({task_type}).")
+                    
+                    st.success(f"✅ OT successfully requested for {target_name} ({ot_hours} hrs)!")
+            finally:
+                release_connection(conn)
 
 # ==================== 2. MY HISTORY ====================
 elif st.session_state.current_view == "history":
@@ -559,19 +637,22 @@ elif st.session_state.current_view == "history":
         """, unsafe_allow_html=True)
         
         conn = get_connection()
-        df = pd.read_sql("SELECT * FROM ot_logs WHERE employee_name = %s", conn, params=(user['name'],))
-        conn.close()
+        try:
+            df = pd.read_sql("SELECT * FROM ot_logs WHERE employee_name = %s", conn, params=(user['name'],))
+        finally:
+            release_connection(conn)
         
         if df.empty:
             st.info("No OT records found.")
         else:
-            fc1, fc2, fc3 = st.columns(3)
+            fc1, fc2, fc3 = st.columns([1.5, 1.5, 2])
             with fc1:
                 start_date_filter = st.date_input("Start Date", value=date(date.today().year, date.today().month, 1))
             with fc2:
                 end_date_filter = st.date_input("End Date", value=date.today())
             with fc3:
-                status_filter = st.selectbox("Status Filter", options=["All", "Pending", "Approved", "Rejected"])
+                # Modern Segment Filter Chips
+                status_filter = st.segmented_control("Status Filter", options=["All", "Pending", "Approved", "Rejected"], default="All")
                 
             df['date_dt'] = pd.to_datetime(df['date']).dt.date
             filtered_history = df[(df['date_dt'] >= start_date_filter) & (df['date_dt'] <= end_date_filter)]
@@ -587,7 +668,7 @@ elif st.session_state.current_view == "history":
             c2.metric("Approved Payable Hours", f"{app_hrs:.1f} hrs")
             c3.metric("Filtered Payout Amount", f"₹{total_amt:.0f}")
             
-            history_display = filtered_history[['date', 'ot_hours', 'task_type', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
+            history_display = filtered_history[['date', 'ot_hours', 'task_type', 'expected_output', 'actual_output', 'productivity', 'status', 'amount', 'rejection_reason']].copy()
             history_display.rename(columns={
                 'date': 'Date',
                 'ot_hours': 'OT Hours',
@@ -596,7 +677,8 @@ elif st.session_state.current_view == "history":
                 'actual_output': 'Actual Output',
                 'productivity': 'Productivity',
                 'status': 'Status',
-                'amount': 'Payout Amount'
+                'amount': 'Payout Amount',
+                'rejection_reason': 'Rejection Notes'
             }, inplace=True)
             
             styled_history = (
@@ -630,11 +712,13 @@ elif st.session_state.current_view == "dashboard":
         """, unsafe_allow_html=True)
         
         conn = get_connection()
-        query = "SELECT * FROM ot_logs"
-        if user['role'] == 'TL':
-            query += f" WHERE tl_name = '{user['name']}'"
-        df = pd.read_sql(query, conn)
-        conn.close()
+        try:
+            query = "SELECT * FROM ot_logs"
+            if user['role'] == 'TL':
+                query += f" WHERE tl_name = '{user['name']}'"
+            df = pd.read_sql(query, conn)
+        finally:
+            release_connection(conn)
         
         if df.empty:
             st.info("No OT records to review.")
@@ -679,7 +763,7 @@ elif st.session_state.current_view == "dashboard":
                 st.success("🎉 All caught up! No pending requests.")
             else:
                 with st.expander("⚡ Multi-Select Batch Approval", expanded=True):
-                    st.write("Select multiple pending requests to approve them simultaneously:")
+                    st.write("Select multiple pending requests to approve simultaneously with 100% verified targets:")
                     selected_ids = []
                     for idx, r in pending_df.iterrows():
                         col_chk, col_det = st.columns([0.5, 9.5])
@@ -688,27 +772,35 @@ elif st.session_state.current_view == "dashboard":
                             if chk:
                                 selected_ids.append(r)
                         with col_det:
-                            st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Expected Output: {r['expected_output']}")
+                            st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Target: {r['expected_output']}")
                     
                     if selected_ids:
                         if st.button(f"Approve Selected ({len(selected_ids)}) ✅", type="primary"):
                             conn = get_connection()
-                            cursor = conn.cursor()
-                            for req in selected_ids:
-                                v_hrs = req['ot_hours']
-                                amt = v_hrs * 120
-                                cursor.execute("""
-                                    UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = 1.0, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
-                                    WHERE id = %s
-                                """, (req['expected_output'], v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), req['id']))
-                                
-                                cursor.execute("SELECT email FROM users WHERE name = %s", (req['employee_name'],))
-                                emp_mail = cursor.fetchone()
-                                if emp_mail:
-                                    send_notification(emp_mail[0], f"🎉 OT Approved: Your {req['ot_hours']}h request on {req['date']} was approved by {user['name']}.")
-                            conn.commit()
-                            conn.close()
-                            st.success(f"Batch approved {len(selected_ids)} requests!")
+                            try:
+                                cursor = conn.cursor()
+                                for req in selected_ids:
+                                    # Self-Approval Guardrail
+                                    if req['employee_name'] == user['name']:
+                                        st.error(f"❌ Blocked: Self-approval prohibited for {req['employee_name']} (Record #{req['id']}).")
+                                        continue
+
+                                    v_hrs = req['ot_hours']
+                                    amt = v_hrs * 120
+                                    cursor.execute("""
+                                        UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = 1.0, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
+                                        WHERE id = %s
+                                    """, (req['expected_output'], v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), req['id']))
+                                    
+                                    cursor.execute("SELECT email FROM users WHERE name = %s", (req['employee_name'],))
+                                    emp_mail = cursor.fetchone()
+                                    if emp_mail:
+                                        send_notification(emp_mail[0], f"🎉 OT Approved: Your {req['ot_hours']}h request on {req['date']} was approved by {user['name']}.")
+                                    record_audit(user['email'], "BATCH_APPROVE", req['employee_name'], f"Approved OT record #{req['id']}")
+                                conn.commit()
+                            finally:
+                                release_connection(conn)
+                            st.success(f"Batch processed {len(selected_ids)} requests!")
                             st.rerun()
 
                 st.markdown("### 📝 Individual Request Review")
@@ -719,61 +811,75 @@ elif st.session_state.current_view == "dashboard":
                             st.write(f"**TL:** {row['tl_name']}")
                             st.write(f"**Shift:** {row['shift_start']} - {row['shift_end']}")
                             st.write(f"**OT Timing:** {row['ot_start']} - {row['ot_end']}")
-                            st.write(f"**Expected Output:** {row['expected_output']}")
+                            st.write(f"**Target Output:** {row['expected_output']}")
                         with col_b:
-                            # Strict Hard-Block: Requires min_value = 1.0. Zero cannot be submitted.
-                            actual_out = st.number_input(
-                                f"Enter Actual Output for row {row['id']}", 
-                                min_value=1.0, 
-                                value=float(row['expected_output']), 
-                                key=f"out_{row['id']}",
-                                help="Must be greater than 0. Zero output cannot be claimed for overtime."
-                            )
-                            col_btn1, col_btn2 = st.columns(2)
-                            if col_btn1.button("Approve ✅", key=f"app_{row['id']}"):
-                                expected = row['expected_output']
-                                prod = (actual_out / expected) if expected > 0 else 0
-                                v_hrs = row['ot_hours'] if prod >= 0.7 else (row['ot_hours'] * 0.5 if prod >= 0.5 else 0)
-                                amt = v_hrs * 120
-                                
-                                conn = get_connection()
-                                cursor = conn.cursor()
-                                cursor.execute("""
-                                    UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = %s, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
-                                    WHERE id = %s
-                                """, (actual_out, prod, v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
-                                cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
-                                emp_mail = cursor.fetchone()
-                                conn.commit()
-                                conn.close()
-                                
-                                if emp_mail:
-                                    send_notification(emp_mail[0], f"🎉 OT Approved: Your {row['ot_hours']}h request on {row['date']} has been approved.")
-                                st.success("Approved successfully!")
-                                st.rerun()
-                                
-                            if col_btn2.button("Reject ❌", key=f"rej_{row['id']}"):
-                                expected = row['expected_output']
-                                prod = (actual_out / expected) if expected > 0 else 0
-                                conn = get_connection()
-                                cursor = conn.cursor()
-                                cursor.execute("""
-                                    UPDATE ot_logs 
-                                    SET status = 'Rejected', actual_output = %s, productivity = %s, verified_hours = 0, amount = 0, approved_by = %s, approved_at = %s 
-                                    WHERE id = %s
-                                """, (actual_out, prod, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
-                                cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
-                                emp_mail = cursor.fetchone()
-                                conn.commit()
-                                conn.close()
-                                
-                                if emp_mail:
-                                    send_notification(emp_mail[0], f"⚠️ OT Rejected: Your {row['ot_hours']}h request on {row['date']} was rejected.")
-                                st.warning("Request rejected.")
-                                st.rerun()
+                            # Self-Approval Check
+                            if row['employee_name'] == user['name']:
+                                st.warning("🔒 Self-Approval Guardrail: You cannot verify or approve your own overtime claim.")
+                            else:
+                                actual_out = st.number_input(
+                                    f"Enter Actual Output for row {row['id']}", 
+                                    min_value=1.0, 
+                                    value=float(row['expected_output']), 
+                                    key=f"out_{row['id']}",
+                                    help="Must be greater than 0. Zero output cannot be claimed for overtime."
+                                )
+                                rej_reason = st.text_input("Rejection Reason (Mandatory if Rejecting):", key=f"rej_reason_{row['id']}")
+
+                                col_btn1, col_btn2 = st.columns(2)
+                                if col_btn1.button("Approve ✅", key=f"app_{row['id']}"):
+                                    expected = row['expected_output']
+                                    prod = (actual_out / expected) if expected > 0 else 0
+                                    v_hrs = row['ot_hours'] if prod >= 0.7 else (row['ot_hours'] * 0.5 if prod >= 0.5 else 0)
+                                    amt = v_hrs * 120
+                                    
+                                    conn = get_connection()
+                                    try:
+                                        cursor = conn.cursor()
+                                        cursor.execute("""
+                                            UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = %s, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
+                                            WHERE id = %s
+                                        """, (actual_out, prod, v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                                        cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
+                                        emp_mail = cursor.fetchone()
+                                        conn.commit()
+                                        record_audit(user['email'], "APPROVE_OT", row['employee_name'], f"Approved record #{row['id']}")
+                                    finally:
+                                        release_connection(conn)
+                                    
+                                    if emp_mail:
+                                        send_notification(emp_mail[0], f"🎉 OT Approved: Your {row['ot_hours']}h request on {row['date']} has been approved.")
+                                    st.success("Approved successfully!")
+                                    st.rerun()
+                                    
+                                if col_btn2.button("Reject ❌", key=f"rej_{row['id']}"):
+                                    if not rej_reason.strip():
+                                        st.error("❌ Mandatory Field: You must specify a Rejection Reason before rejecting.")
+                                    else:
+                                        expected = row['expected_output']
+                                        prod = (actual_out / expected) if expected > 0 else 0
+                                        conn = get_connection()
+                                        try:
+                                            cursor = conn.cursor()
+                                            cursor.execute("""
+                                                UPDATE ot_logs 
+                                                SET status = 'Rejected', actual_output = %s, productivity = %s, verified_hours = 0, amount = 0, approved_by = %s, approved_at = %s, rejection_reason = %s
+                                                WHERE id = %s
+                                            """, (actual_out, prod, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), rej_reason.strip(), row['id']))
+                                            cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
+                                            emp_mail = cursor.fetchone()
+                                            conn.commit()
+                                            record_audit(user['email'], "REJECT_OT", row['employee_name'], f"Reason: {rej_reason.strip()}")
+                                        finally:
+                                            release_connection(conn)
+                                        
+                                        if emp_mail:
+                                            send_notification(emp_mail[0], f"⚠️ OT Rejected: Your {row['ot_hours']}h request on {row['date']} was rejected. Reason: {rej_reason.strip()}")
+                                        st.warning("Request rejected.")
+                                        st.rerun()
 
             st.markdown("### 📋 All Request Logs")
-            dashboard_display = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
+            dashboard_display = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount', 'rejection_reason']].copy()
             dashboard_display.rename(columns={
                 'date': 'Date',
                 'employee_name': 'Employee Name',
@@ -784,7 +890,8 @@ elif st.session_state.current_view == "dashboard":
                 'actual_output': 'Actual Output',
                 'productivity': 'Productivity',
                 'status': 'Status',
-                'amount': 'Payout Amount'
+                'amount': 'Payout Amount',
+                'rejection_reason': 'Rejection Reason'
             }, inplace=True)
             
             styled_all_df = (
@@ -819,17 +926,19 @@ elif st.session_state.current_view == "reports":
         
         r_type = st.selectbox("Select Report Type", options=["Monthly Summary Report", "Detailed OT Log Report"])
         
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns([1.5, 1.5, 2])
         with col1:
             report_month = st.selectbox("Month", options=list(range(1, 13)), index=date.today().month - 1)
         with col2:
             report_year = st.selectbox("Year", options=[2025, 2026, 2027], index=1)
         with col3:
-            report_status = st.selectbox("Status Filter", options=["All", "Approved", "Pending", "Rejected"], key="rep_status")
+            report_status = st.segmented_control("Status Filter", options=["All", "Approved", "Pending", "Rejected"], default="All")
             
         conn = get_connection()
-        df = pd.read_sql("SELECT * FROM ot_logs", conn)
-        conn.close()
+        try:
+            df = pd.read_sql("SELECT * FROM ot_logs", conn)
+        finally:
+            release_connection(conn)
         
         if not df.empty:
             df['date_dt'] = pd.to_datetime(df['date'])
@@ -874,7 +983,7 @@ elif st.session_state.current_view == "reports":
                 csv = summary_display.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
             else:
-                detailed_display = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
+                detailed_display = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount', 'rejection_reason']].copy()
                 detailed_display.rename(columns={
                     'date': 'Date',
                     'employee_name': 'Employee Name',
@@ -886,7 +995,8 @@ elif st.session_state.current_view == "reports":
                     'actual_output': 'Actual Output',
                     'productivity': 'Productivity',
                     'status': 'Status',
-                    'amount': 'Payout Amount'
+                    'amount': 'Payout Amount',
+                    'rejection_reason': 'Rejection Reason'
                 }, inplace=True)
                 
                 styled_report_df = (
@@ -916,14 +1026,14 @@ elif st.session_state.current_view == "admin":
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚙️ Admin User, Credential & Bulk Onboarding</h2>
-                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Create users, bulk upload employees, or manage existing records directly from the directory.</p>
+                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Manage enterprise users, audit system actions, or upload bulk employee mappings.</p>
                     </div>
                     <div class="brand-logo">EXCIT<span>EL</span></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        tab_adm1, tab_adm2 = st.tabs(["➕ Add New User / Bulk Upload", "📋 Active Users Directory & Management"])
+        tab_adm1, tab_adm2, tab_adm3 = st.tabs(["➕ Add User / Bulk Upload", "📋 Active Users Directory", "🔍 Security Audit Trail"])
         
         with tab_adm1:
             col_u1, col_u2 = st.columns(2)
@@ -941,20 +1051,21 @@ elif st.session_state.current_view == "admin":
                     if st.form_submit_button("Save User ➕", type="primary"):
                         if u_name and u_email and u_pass and u_emp_id:
                             conn = get_connection()
-                            cursor = conn.cursor()
-                            pass_hash = hash_password(u_pass)
                             try:
+                                cursor = conn.cursor()
+                                pass_hash = hash_password(u_pass)
                                 cursor.execute("""
                                     INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
                                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                                 """, (u_email.strip().lower(), u_name, u_role, u_emp_id, u_tl_name, u_tl_id, pass_hash))
                                 conn.commit()
+                                record_audit(user['email'], "CREATE_USER", u_email.strip().lower(), f"Created role {u_role}")
                                 st.success(f"User {u_name} created successfully!")
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Error: {e}")
                             finally:
-                                conn.close()
+                                release_connection(conn)
                         else:
                             st.error("Please fill in Name, Email, Password, and Employee ID.")
 
@@ -971,47 +1082,57 @@ elif st.session_state.current_view == "admin":
                         st.dataframe(bulk_df.head(3), use_container_width=True)
                         if st.button("Process Bulk Import 🚀", type="primary"):
                             conn = get_connection()
-                            cursor = conn.cursor()
-                            success_count = 0
-                            for _, row in bulk_df.iterrows():
-                                try:
-                                    email = str(row['email']).strip().lower()
-                                    name = str(row['name']).strip()
-                                    role = str(row['role']).strip()
-                                    emp_id = str(row['emp_id']).strip()
-                                    tl_name = str(row.get('tl_name', 'Unassigned')).strip()
-                                    tl_id = str(row.get('tl_id', '')).strip()
-                                    raw_pass = str(row.get('password', 'Password123'))
-                                    if raw_pass == 'nan' or not raw_pass:
-                                        raw_pass = 'Password123'
-                                    p_hash = hash_password(raw_pass)
-                                    cursor.execute("""
-                                        INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                                        ON CONFLICT (email) DO UPDATE SET 
-                                            name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
-                                            tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
-                                            password_hash = EXCLUDED.password_hash
-                                    """, (email, name, role, emp_id, tl_name, tl_id, p_hash))
-                                    success_count += 1
-                                except Exception:
-                                    continue
-                            conn.commit()
-                            conn.close()
-                            st.success(f"Successfully imported {success_count} records!")
-                            st.rerun()
+                            try:
+                                cursor = conn.cursor()
+                                success_count = 0
+                                for _, row in bulk_df.iterrows():
+                                    try:
+                                        email = str(row['email']).strip().lower()
+                                        name = str(row['name']).strip()
+                                        role = str(row['role']).strip()
+                                        emp_id = str(row['emp_id']).strip()
+                                        tl_name = str(row.get('tl_name', 'Unassigned')).strip()
+                                        tl_id = str(row.get('tl_id', '')).strip()
+                                        raw_pass = str(row.get('password', 'Password123'))
+                                        if raw_pass == 'nan' or not raw_pass:
+                                            raw_pass = 'Password123'
+                                        p_hash = hash_password(raw_pass)
+                                        cursor.execute("""
+                                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                            ON CONFLICT (email) DO UPDATE SET 
+                                                name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
+                                                tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
+                                                password_hash = EXCLUDED.password_hash
+                                        """, (email, name, role, emp_id, tl_name, tl_id, p_hash))
+                                        success_count += 1
+                                    except Exception:
+                                        continue
+                                conn.commit()
+                                record_audit(user['email'], "BULK_IMPORT", f"{success_count}_USERS", "Bulk file onboarding")
+                                st.success(f"Successfully imported {success_count} records!")
+                                st.rerun()
+                            finally:
+                                release_connection(conn)
                     except Exception as file_err:
                         st.error(f"Error reading file: {file_err}")
 
         with tab_adm2:
             st.markdown("### 📋 Active System Users Directory")
             conn = get_connection()
-            users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users", conn)
-            conn.close()
+            try:
+                users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users", conn)
+            finally:
+                release_connection(conn)
             
             if users_df.empty:
                 st.info("No users found.")
             else:
+                # Direct Directory CSV Export
+                csv_export = users_df.to_csv(index=False).encode('utf-8')
+                st.download_button("Export Directory as CSV 📥", csv_export, "system_users_directory.csv", "text/csv")
+                st.markdown("<br>", unsafe_allow_html=True)
+                
                 st.markdown("<div class='table-header'>", unsafe_allow_html=True)
                 header_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.2])
                 header_cols[0].markdown("**Name**")
@@ -1038,6 +1159,26 @@ elif st.session_state.current_view == "admin":
                     if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
                         delete_user_dialog(row['email'], user['email'])
                     st.markdown("<hr style='margin: 0px; padding: 0px; border-top: 1px solid #F0F0F0;'>", unsafe_allow_html=True)
+
+        with tab_adm3:
+            st.markdown("### 🔍 Security Audit Trail")
+            conn = get_connection()
+            try:
+                audit_df = pd.read_sql("SELECT timestamp, performer, action, target, details FROM audit_logs ORDER BY id DESC LIMIT 50", conn)
+            finally:
+                release_connection(conn)
+            
+            if audit_df.empty:
+                st.info("No audit entries logged yet.")
+            else:
+                audit_df.rename(columns={
+                    'timestamp': 'Timestamp',
+                    'performer': 'Actor Email',
+                    'action': 'Security Action',
+                    'target': 'Target Entity',
+                    'details': 'Audit Details'
+                }, inplace=True)
+                st.dataframe(audit_df, use_container_width=True, hide_index=True)
 
 # ==================== 6. GUIDELINES & SECURITY POLICY PAGE ====================
 elif st.session_state.current_view == "guidelines":
@@ -1068,6 +1209,7 @@ elif st.session_state.current_view == "guidelines":
             <ul>
                 <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
                 <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
+                <li><b>Submission Window:</b> Claims must be entered within <b>48 hours</b> of shift completion. Older dates are locked out.</li>
                 <li><b>Shift Overlap Prohibition:</b> Overtime hours must not intersect with regular scheduled shift timings under any circumstances. Overlapping submissions will be automatically blocked by system validation.</li>
                 <li><b>Zero Deliverables Prohibited:</b> Overtime claims require measurable output. An actual output entry of 0 is not permitted on paid overtime requests.</li>
             </ul>
@@ -1077,7 +1219,8 @@ elif st.session_state.current_view == "guidelines":
             <h3 style="color: #991B1B; margin-top: 0;">3. Data Security & Anti-Falsification Policy</h3>
             <ul>
                 <li><b>Strict Prohibition of False Records:</b> Logging fabricated overtime hours, inflating output units, or misrepresenting timings is strictly prohibited and constitutes a direct breach of employment conduct.</li>
-                <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system database.</li>
+                <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system audit database.</li>
+                <li><b>Self-Approval Prohibition:</b> Supervisors and managers cannot approve their own overtime claims.</li>
                 <li><b>Disciplinary Enforcement:</b> Any user caught manipulating credentials, submitting fraudulent overtime, or circumventing system role permissions will be subject to immediate disciplinary review and loss of portal access.</li>
                 <li><b>Credential Confidentiality:</b> Users are strictly accountable for maintaining the confidentiality of their portal passwords. Never share passwords or allow third parties to operate under your login session.</li>
             </ul>
