@@ -260,37 +260,20 @@ st.markdown("""
             text-align: center;
         }
 
-        /* Nav Bar Buttons Styling */
-        .nav-buttons .stButton > button {
-            border-radius: 10px !important;
-            border: 1px solid #E2E8F0 !important;
-            background-color: #FFFFFF !important;
-            color: #0E2B5C !important;
-            font-weight: 600 !important;
-            font-size: 14px !important;
-            padding: 8px 16px !important;
-            transition: all 0.2s ease !important;
-        }
-        .nav-buttons .stButton > button:hover {
-            border-color: #FF6B00 !important;
-            color: #FF6B00 !important;
-            box-shadow: 0 2px 8px rgba(255, 107, 0, 0.1) !important;
-        }
-
         /* Primary Submit Buttons */
         button[kind="primary"] {
-            background: #FF6B00 !important;
+            background: #1C377B !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 10px !important;
             font-size: 14px !important;
             font-weight: 700 !important;
             padding: 12px 20px !important;
-            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25) !important;
+            box-shadow: 0 4px 12px rgba(28, 55, 123, 0.25) !important;
             width: 100% !important;
         }
         button[kind="primary"]:hover {
-            background: #E05D00 !important;
+            background: #14285A !important;
         }
 
         /* High-Contrast Corporate Inputs */
@@ -329,8 +312,18 @@ st.markdown("""
             margin-bottom: 2px !important;
         }
 
-        /* Perfect Unified Single Login Card matching image_2d5467.png */
-        .unified-login-card {
+        /* Clean Unified White Card Container (No Ghost Boxes) */
+        .workspace-card-box {
+            background: #FFFFFF;
+            border-radius: 20px;
+            border: 1px solid #E2E8F0;
+            border-top: 6px solid #FF6B00;
+            padding: 38px 46px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.04);
+            margin-bottom: 25px;
+        }
+
+        .login-card-box {
             background: #FFFFFF;
             border-radius: 20px;
             border: 1px solid #E2E8F0;
@@ -340,16 +333,6 @@ st.markdown("""
             margin: 30px auto 0 auto;
             max-width: 520px;
             width: 100%;
-        }
-
-        .workspace-card-box {
-            background: #FFFFFF;
-            border-radius: 20px;
-            border: 1px solid #E2E8F0;
-            border-top: 6px solid #FF6B00;
-            padding: 38px 46px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.04);
-            margin-bottom: 25px;
         }
 
         /* Bulk Upload Specific Styling */
@@ -666,7 +649,7 @@ if not st.session_state.authenticated:
     col1, col2, col3 = st.columns([1, 1.3, 1])
     with col2:
         st.markdown("""
-            <div class="unified-login-card">
+            <div class="login-card-box">
                 <div style="text-align: center; margin-bottom: 24px;">
                     <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
                     <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
@@ -789,43 +772,45 @@ with ut_c3:
         st.session_state.user_name = ""
         st.rerun()
 
-# ==================== CLEAN NATIVE NAVIGATION BAR ====================
-st.markdown('<div class="nav-buttons">', unsafe_allow_html=True)
+# ==================== EXACT REPLICA OF THE NAV PILL CAPSULE (MATCHING image_2d5fd0.png) ====================
+nav_tabs_html = ""
 if user['role'] == "Admin":
-    nav_cols = st.columns([2.5, 1, 1, 1, 1, 1])
-    with nav_cols[0]:
-        st.markdown(f"<div style='color: #0E2B5C; font-weight: 700; padding-top: 5px; font-size: 15px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with nav_cols[1]:
-        if st.button("📄 OT Form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with nav_cols[2]:
-        if st.button("🕒 History", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
-    with nav_cols[3]:
-        if st.button("📊 Dashboard", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
-    with nav_cols[4]:
-        if st.button("📈 Reports", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
-    with nav_cols[5]:
-        if st.button("👥 Admin", use_container_width=True): st.session_state.current_view = "admin"; st.rerun()
-
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" style="background:#FF6B00; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📄 OT Form</a>
+        <a href="?tab=history" target="_self" style="background:#2B71F2; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">🕒 History</a>
+        <a href="?tab=dashboard" target="_self" style="background:#00B67A; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📊 Dashboard</a>
+        <a href="?tab=reports" target="_self" style="background:#8B5CF6; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📈 Reports</a>
+        <a href="?tab=admin" target="_self" style="background:#EF4444; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">👥 Admin</a>
+    """
 elif user['role'] == "TL":
-    nav_cols = st.columns([3.5, 1, 1, 1])
-    with nav_cols[0]:
-        st.markdown(f"<div style='color: #0E2B5C; font-weight: 700; padding-top: 5px; font-size: 15px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with nav_cols[1]:
-        if st.button("📄 OT Form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with nav_cols[2]:
-        if st.button("📊 Dashboard", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
-    with nav_cols[3]:
-        if st.button("📈 Reports", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
-        
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" style="background:#FF6B00; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📄 OT Form</a>
+        <a href="?tab=dashboard" target="_self" style="background:#00B67A; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📊 Dashboard</a>
+        <a href="?tab=reports" target="_self" style="background:#8B5CF6; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📈 Reports</a>
+    """
 else:
-    nav_cols = st.columns([4.5, 1, 1])
-    with nav_cols[0]:
-        st.markdown(f"<div style='color: #0E2B5C; font-weight: 700; padding-top: 5px; font-size: 15px;'>🛡️ {user['name']} ({user['role']})</div>", unsafe_allow_html=True)
-    with nav_cols[1]:
-        if st.button("📄 OT Form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
-    with nav_cols[2]:
-        if st.button("🕒 History", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
-st.markdown('</div>', unsafe_allow_html=True)
+    nav_tabs_html = """
+        <a href="?tab=portal" target="_self" style="background:#FF6B00; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">📄 OT Form</a>
+        <a href="?tab=history" target="_self" style="background:#2B71F2; color:#FFFFFF; text-decoration:none; padding:7px 16px; border-radius:18px; font-weight:700; font-size:13px; display:inline-block;">🕒 History</a>
+    """
+
+st.markdown(f"""
+    <div style="background: #1C377B; border-radius: 30px; padding: 7px 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(28, 55, 123, 0.2);">
+        <div style="color: #FFFFFF; font-weight: 700; font-size: 14.5px; display: flex; align-items: center; gap: 8px;">
+            <span style="color:#FF6B00;">🛡️</span> {user['name']} ({user['role']})
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            {nav_tabs_html}
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+# Synchronize tab changes from URL query parameters
+query_tab = st.query_params.get("tab")
+if query_tab and query_tab in ["portal", "history", "dashboard", "reports", "admin", "guidelines"]:
+    if st.session_state.current_view != query_tab:
+        st.session_state.current_view = query_tab
+        st.rerun()
 
 RATES = {'Calls': 12, 'Backend': 10, 'Tickets': 12, 'Complaints': 8, 'Email': 15}
 
@@ -851,7 +836,7 @@ def color_productivity_and_status(val):
         return 'background-color: #FEF3C7; color: #D97706; font-weight: 800; border-radius: 14px; text-align: center;'
     return ''
 
-# ==================== 1. OT FORM PORTAL ====================
+# ==================== 1. OT FORM PORTAL (MATCHING image_2d5fad.png) ====================
 if st.session_state.current_view == "portal":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     st.markdown("""
