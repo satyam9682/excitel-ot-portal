@@ -137,6 +137,7 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap');
         
+        /* Eliminate all default margin and padding to stick header flush to top edge */
         html, body, .stApp {
             background-color: #F4F6FB !important;
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
@@ -148,21 +149,24 @@ st.markdown("""
             display: none !important;
         }
         
-        .main .block-container {
-            padding: 0 !important;
+        .main, .block-container {
+            padding-top: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
             max-width: 100% !important;
         }
-        
-        /* Top Navigation Header Bar */
+
+        /* Full Width Edge-to-Edge Sticky Topbar */
         .excitel-topbar {
             background: #FFFFFF;
             width: 100%;
-            padding: 14px 44px;
+            padding: 14px 48px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 5px solid #FF6B00;
-            margin-bottom: 24px;
+            margin: 0 0 28px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .brand-cluster {
             display: flex;
@@ -205,7 +209,7 @@ st.markdown("""
         .nav-pill-wrapper {
             background: #1F3A60;
             border-radius: 35px;
-            padding: 7px 16px;
+            padding: 6px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -223,7 +227,7 @@ st.markdown("""
             padding-left: 12px;
         }
 
-        /* Centered White Workspace Card */
+        /* Disciplined Centered White Workspace Card */
         .workspace-card {
             background: #FFFFFF;
             border-radius: 20px;
@@ -232,6 +236,17 @@ st.markdown("""
             max-width: 1180px;
             margin: 0 auto 30px auto;
             box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        /* Fixed-Width Form Container Card Styling */
+        div[data-testid="stForm"] {
+            background: #FFFFFF !important;
+            border: 1px solid #E5E7EB !important;
+            border-top: 5px solid #FF6B00 !important;
+            border-radius: 20px !important;
+            padding: 34px 38px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important;
+            margin: 0 auto !important;
         }
 
         /* 5 Top Summary Metric Cards */
@@ -275,23 +290,12 @@ st.markdown("""
         .proxy-container {
             border: 2px dashed #2563EB;
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 14px 18px;
             background: #F8FAFF;
-            margin-bottom: 22px;
+            margin-bottom: 20px;
         }
 
-        /* Clean Unified Login Card */
-        .login-card-container {
-            background: #FFFFFF;
-            border-radius: 20px;
-            border-top: 5px solid #FF6B00;
-            padding: 40px 48px;
-            max-width: 480px;
-            margin: 60px auto 0 auto;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
-        }
-
-        /* Form Inputs */
+        /* Standardized Text Inputs */
         div[data-baseweb="input"] {
             border-radius: 8px !important;
             border: 1px solid #D1D5DB !important;
@@ -301,18 +305,13 @@ st.markdown("""
             border-color: #FF6B00 !important;
         }
 
-        /* Buttons Styling */
+        /* Standardized Rounded Pill Buttons */
         .stButton>button {
             border-radius: 20px !important;
             font-weight: 700 !important;
             border: none !important;
             padding: 8px 18px !important;
             width: 100% !important;
-        }
-        
-        div[data-testid="stForm"] {
-            border: none !important;
-            padding: 0 !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -329,8 +328,9 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY ====================
+# ==================== LOGIN GATEWAY (STANDARD FIXED WIDTH) ====================
 if not st.session_state.authenticated:
+    # Full-bleed topbar positioned right at the top
     st.markdown("""
         <div class="excitel-topbar">
             <div class="brand-cluster">
@@ -343,48 +343,49 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-        <div class="login-card-container">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-                <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
-                <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
-            </div>
-    """, unsafe_allow_html=True)
+    # Use centered disciplined column constraint (avoids full-width stretching)
+    col1, col2, col3 = st.columns([1, 1.25, 1])
+    with col2:
+        with st.form("login_form"):
+            st.markdown("""
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                    <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
+                    <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            login_email = st.text_input("Official Email ID")
+            login_password = st.text_input("Password", type="password")
+            st.markdown("<br>", unsafe_allow_html=True)
+            submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
 
-    with st.form("login_form"):
-        login_email = st.text_input("Official Email ID")
-        login_password = st.text_input("Password", type="password")
-        submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
-
-        if submit_login:
-            if not login_email or not login_password:
-                st.error("Please enter both email and password.")
-            else:
-                conn = get_connection()
-                try:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
-                    res = cursor.fetchone()
-                finally:
-                    release_connection(conn)
-
-                if res:
-                    db_name, db_role, db_pass_hash = res
-                    if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
-                        st.session_state.authenticated = True
-                        st.session_state.user_email = login_email.strip().lower()
-                        st.session_state.user_name = db_name
-                        st.session_state.user_role = db_role
-                        st.session_state.current_view = "portal"
-                        record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
-                        st.rerun()
-                    else:
-                        st.error("❌ Incorrect password.")
+            if submit_login:
+                if not login_email or not login_password:
+                    st.error("Please enter both email and password.")
                 else:
-                    st.error("❌ Email not registered in the system.")
+                    conn = get_connection()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
+                        res = cursor.fetchone()
+                    finally:
+                        release_connection(conn)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+                    if res:
+                        db_name, db_role, db_pass_hash = res
+                        if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
+                            st.session_state.authenticated = True
+                            st.session_state.user_email = login_email.strip().lower()
+                            st.session_state.user_name = db_name
+                            st.session_state.user_role = db_role
+                            st.session_state.current_view = "portal"
+                            record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
+                            st.rerun()
+                        else:
+                            st.error("❌ Incorrect password.")
+                    else:
+                        st.error("❌ Email not registered in the system.")
     st.stop()
 
 # ==================== FETCH LOGGED-IN USER ====================
@@ -744,7 +745,6 @@ elif st.session_state.current_view == "dashboard":
             </div>
         """, unsafe_allow_html=True)
         
-        # 3 Analytics Charts
         ch1, ch2, ch3 = st.columns(3)
         with ch1:
             st.markdown("<div style='font-size:12px; font-weight:700; color:#0E2B5C; text-align:center;'>📊 STATUS BREAKDOWN</div>", unsafe_allow_html=True)
@@ -778,7 +778,6 @@ elif st.session_state.current_view == "dashboard":
 
         st.markdown("<hr style='border:none; border-top:1px solid #E5E7EB; margin:20px 0;'>", unsafe_allow_html=True)
         
-        # Filter Bar matching screenshot 3.1
         f_c1, f_c2, f_c3, f_c4, f_c5, f_c6 = st.columns(6)
         with f_c1:
             emp_filt = st.selectbox("EMPLOYEE", options=["Select Employee"] + sorted(df['employee_name'].unique().tolist()))
@@ -807,7 +806,6 @@ elif st.session_state.current_view == "dashboard":
 
         st.markdown("### 📋 Claims Verification & Master Table")
         
-        # Pending Claims Inline Approval Section matching screenshot 3.2
         pending_rows = filtered_df[filtered_df['status'] == 'Pending']
         if not pending_rows.empty:
             for idx, p_row in pending_rows.iterrows():
@@ -860,7 +858,6 @@ elif st.session_state.current_view == "dashboard":
                             st.rerun()
                 st.markdown("<hr style='border:none; border-top:1px dashed #E5E7EB; margin:10px 0;'>", unsafe_allow_html=True)
         
-        # Display Table matching screenshot 3.2
         d_table = filtered_df.copy()
         d_table['formatted_date'] = pd.to_datetime(d_table['date']).dt.strftime('%d-%b-%Y')
         d_table['hours_num'] = d_table['ot_hours'].apply(lambda x: int(x) if x.is_integer() else x)
@@ -919,7 +916,6 @@ elif st.session_state.current_view == "reports":
         raw_rep_df['date_dt'] = pd.to_datetime(raw_rep_df['date'])
         filtered_rep = raw_rep_df[(raw_rep_df['date_dt'].dt.month == month_int) & (raw_rep_df['date_dt'].dt.year == rep_year)]
         
-        # Reports KPI summary banner matching screenshot 4
         tot_emp = filtered_rep['employee_name'].nunique()
         tot_hrs = filtered_rep['ot_hours'].sum()
         tot_payout = filtered_rep[filtered_rep['status'] == 'Approved']['amount'].sum()
@@ -987,7 +983,6 @@ elif st.session_state.current_view == "admin":
     if user['role'] != "Admin":
         st.error("Restricted to system administrators.")
     else:
-        # Inline user creation matching screenshot 5
         with st.form("admin_create_form"):
             u_c1, u_c2, u_c3, u_c4 = st.columns([2.5, 3, 2, 1.8])
             with u_c1:
@@ -1021,7 +1016,6 @@ elif st.session_state.current_view == "admin":
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # User Directory matching screenshot 5
         conn = get_connection()
         try:
             users_list = pd.read_sql("SELECT name, email, role FROM users ORDER BY name ASC", conn)
