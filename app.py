@@ -286,7 +286,7 @@ def delete_user_dialog(email, current_user_email):
             try:
                 cursor.execute("DELETE FROM users WHERE email = %s", (email,))
                 conn.commit()
-                st.success(f"User deleted successfully!")
+                st.success("User deleted successfully!")
                 st.rerun()
             except Exception as del_err:
                 st.error(f"Error deleting user: {del_err}")
@@ -587,7 +587,6 @@ elif st.session_state.current_view == "history":
             c2.metric("Approved Payable Hours", f"{app_hrs:.1f} hrs")
             c3.metric("Filtered Payout Amount", f"₹{total_amt:.0f}")
             
-            # Formatted presentation DataFrame
             history_display = filtered_history[['date', 'ot_hours', 'task_type', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
             history_display.rename(columns={
                 'date': 'Date',
@@ -722,7 +721,14 @@ elif st.session_state.current_view == "dashboard":
                             st.write(f"**OT Timing:** {row['ot_start']} - {row['ot_end']}")
                             st.write(f"**Expected Output:** {row['expected_output']}")
                         with col_b:
-                            actual_out = st.number_input(f"Enter Actual Output for row {row['id']}", min_value=0.0, value=float(row['expected_output']), key=f"out_{row['id']}")
+                            # Strict Hard-Block: Requires min_value = 1.0. Zero cannot be submitted.
+                            actual_out = st.number_input(
+                                f"Enter Actual Output for row {row['id']}", 
+                                min_value=1.0, 
+                                value=float(row['expected_output']), 
+                                key=f"out_{row['id']}",
+                                help="Must be greater than 0. Zero output cannot be claimed for overtime."
+                            )
                             col_btn1, col_btn2 = st.columns(2)
                             if col_btn1.button("Approve ✅", key=f"app_{row['id']}"):
                                 expected = row['expected_output']
@@ -747,14 +753,15 @@ elif st.session_state.current_view == "dashboard":
                                 st.rerun()
                                 
                             if col_btn2.button("Reject ❌", key=f"rej_{row['id']}"):
+                                expected = row['expected_output']
+                                prod = (actual_out / expected) if expected > 0 else 0
                                 conn = get_connection()
                                 cursor = conn.cursor()
-                                # Record entered actual_output permanently even when rejected
                                 cursor.execute("""
                                     UPDATE ot_logs 
-                                    SET status = 'Rejected', actual_output = %s, productivity = 0, verified_hours = 0, amount = 0, approved_by = %s, approved_at = %s 
+                                    SET status = 'Rejected', actual_output = %s, productivity = %s, verified_hours = 0, amount = 0, approved_by = %s, approved_at = %s 
                                     WHERE id = %s
-                                """, (actual_out, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                                """, (actual_out, prod, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
                                 cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
                                 emp_mail = cursor.fetchone()
                                 conn.commit()
@@ -766,14 +773,16 @@ elif st.session_state.current_view == "dashboard":
                                 st.rerun()
 
             st.markdown("### 📋 All Request Logs")
-            dashboard_display = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].copy()
+            dashboard_display = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
             dashboard_display.rename(columns={
                 'date': 'Date',
                 'employee_name': 'Employee Name',
                 'tl_name': 'Team Leader',
                 'task_type': 'Task Type',
                 'ot_hours': 'OT Hours',
+                'expected_output': 'Target Output',
                 'actual_output': 'Actual Output',
+                'productivity': 'Productivity',
                 'status': 'Status',
                 'amount': 'Payout Amount'
             }, inplace=True)
@@ -783,7 +792,9 @@ elif st.session_state.current_view == "dashboard":
                 .map(highlight_status, subset=['Status'])
                 .format({
                     'OT Hours': '{:.1f} hrs',
+                    'Target Output': '{:.0f}',
                     'Actual Output': '{:.0f}',
+                    'Productivity': '{:.0%}',
                     'Payout Amount': '₹{:.0f}'
                 })
             )
@@ -863,7 +874,7 @@ elif st.session_state.current_view == "reports":
                 csv = summary_display.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
             else:
-                detailed_display = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].copy()
+                detailed_display = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'expected_output', 'actual_output', 'productivity', 'status', 'amount']].copy()
                 detailed_display.rename(columns={
                     'date': 'Date',
                     'employee_name': 'Employee Name',
@@ -871,7 +882,9 @@ elif st.session_state.current_view == "reports":
                     'tl_name': 'Team Leader',
                     'task_type': 'Task Type',
                     'ot_hours': 'OT Hours',
+                    'expected_output': 'Target Output',
                     'actual_output': 'Actual Output',
+                    'productivity': 'Productivity',
                     'status': 'Status',
                     'amount': 'Payout Amount'
                 }, inplace=True)
@@ -881,7 +894,9 @@ elif st.session_state.current_view == "reports":
                     .map(highlight_status, subset=['Status'])
                     .format({
                         'OT Hours': '{:.1f} hrs',
+                        'Target Output': '{:.0f}',
                         'Actual Output': '{:.0f}',
+                        'Productivity': '{:.0%}',
                         'Payout Amount': '₹{:.0f}'
                     })
                 )
@@ -1054,6 +1069,7 @@ elif st.session_state.current_view == "guidelines":
                 <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
                 <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
                 <li><b>Shift Overlap Prohibition:</b> Overtime hours must not intersect with regular scheduled shift timings under any circumstances. Overlapping submissions will be automatically blocked by system validation.</li>
+                <li><b>Zero Deliverables Prohibited:</b> Overtime claims require measurable output. An actual output entry of 0 is not permitted on paid overtime requests.</li>
             </ul>
         </div>
 
