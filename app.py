@@ -10,6 +10,7 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import time
 
 # ==================== AUTOMATIC THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -92,6 +93,15 @@ def init_db():
             )
         ''')
         cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                recipient_email TEXT,
+                message TEXT,
+                created_at TEXT,
+                is_read BOOLEAN DEFAULT FALSE
+            )
+        ''')
+        cursor.execute('''
             CREATE TABLE IF NOT EXISTS audit_logs (
                 id SERIAL PRIMARY KEY,
                 performer TEXT,
@@ -144,12 +154,22 @@ def record_audit(performer, action, target, details=""):
     finally:
         release_connection(conn)
 
-# ==================== EMAIL OTP DISPATCH ENGINE (SMART FALLBACK) ====================
+def send_notification(recipient_email, message):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO notifications (recipient_email, message, created_at) VALUES (%s, %s, %s)",
+            (recipient_email.lower().strip(), message, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Notification Error: {e}")
+    finally:
+        release_connection(conn)
+
+# ==================== EMAIL OTP DISPATCH ENGINE ====================
 def dispatch_otp_email(recipient_email, otp_code):
-    """
-    Sends live email if [smtp] secrets are configured in Streamlit.
-    Returns (success: bool, method: str) where method is 'SMTP' or 'FALLBACK_EMULATED'
-    """
     if "smtp" in st.secrets:
         try:
             smtp_server = st.secrets["smtp"]["server"]
@@ -189,7 +209,6 @@ def dispatch_otp_email(recipient_email, otp_code):
             print(f"SMTP Dispatch Error: {e}")
             return False, "SMTP_FAILED"
             
-    # Fallback to dev emulation when no SMTP secrets exist yet
     return True, "FALLBACK_EMULATED"
 
 # ==================== PAGE CONFIG & CSS STYLING ====================
@@ -294,6 +313,15 @@ st.markdown("""
             max-width: 1180px;
             margin: 0 auto 30px auto;
             box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        .policy-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
         }
 
         div[data-testid="stForm"] {
@@ -417,8 +445,92 @@ st.markdown("""
             background: #F8FAFF;
             margin-bottom: 20px;
         }
+        
+        .table-header-custom {
+            font-weight: 700;
+            color: #0E2B5C;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E2E8F0;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
     </style>
 """, unsafe_allow_html=True)
+
+# ==================== MODAL DIALOGS (RESTORED USER MANAGEMENT) ====================
+@st.dialog("✏️ Edit User Profile")
+def edit_user_dialog(user_dict):
+    st.markdown(f"<div style='color: #605E5C; margin-bottom: 15px; font-size:13px;'>Updating records for: <b>{user_dict['email']}</b></div>", unsafe_allow_html=True)
+    
+    e_name = st.text_input("Full Name", value=str(user_dict['name']))
+    role_opts = ["Employee", "TL", "Admin"]
+    cur_role = str(user_dict['role'])
+    r_idx = role_opts.index(cur_role) if cur_role in role_opts else 0
+    e_role = st.selectbox("Role Assignment", options=role_opts, index=r_idx)
+    e_emp_id = st.text_input("Employee ID", value=str(user_dict['emp_id'] if user_dict['emp_id'] else ""))
+    e_tl_name = st.text_input("Team Leader Name", value=str(user_dict['tl_name'] if user_dict['tl_name'] else ""))
+    e_tl_id = st.text_input("Team Leader ID", value=str(user_dict['tl_id'] if user_dict['tl_id'] else ""))
+    
+    st.markdown("---")
+    e_pass = st.text_input("Reset Password (Optional - Leave blank to keep current)", type="password")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    if col1.button("Save Changes ✅", type="primary", use_container_width=True):
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            if e_pass:
+                new_phash = hash_password(e_pass)
+                cursor.execute("""
+                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s, password_hash = %s WHERE email = %s
+                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, new_phash, user_dict['email']))
+                record_audit(st.session_state.user_email, "EDIT_USER_PASSWORD", user_dict['email'], f"Updated role to {e_role}")
+            else:
+                cursor.execute("""
+                    UPDATE users SET name = %s, role = %s, emp_id = %s, tl_name = %s, tl_id = %s WHERE email = %s
+                """, (e_name, e_role, e_emp_id, e_tl_name, e_tl_id, user_dict['email']))
+                record_audit(st.session_state.user_email, "EDIT_USER", user_dict['email'], f"Updated role to {e_role}")
+            conn.commit()
+            st.success(f"User {user_dict['email']} updated successfully!")
+            st.rerun()
+        except Exception as update_err:
+            st.error(f"Error updating user: {update_err}")
+        finally:
+            release_connection(conn)
+            
+    if col2.button("Cancel", use_container_width=True):
+        st.rerun()
+
+@st.dialog("🗑️ Confirm Deletion")
+def delete_user_dialog(email, current_user_email):
+    st.markdown(f"""
+        <div style='background-color: #FEE2E2; padding: 15px; border-radius: 8px; border-left: 5px solid #991B1B; margin-bottom: 20px;'>
+            <h4 style='color: #991B1B; margin: 0;'>⚠️ Critical Action Warning</h4>
+            <p style='color: #7F1D1D; margin: 5px 0 0 0;'>You are about to permanently delete the profile and access for:<br><br><b>{email}</b><br><br>This action cannot be undone.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    if col1.button("Yes, Delete User 🗑️", type="primary", use_container_width=True):
+        if email == current_user_email:
+            st.error("❌ Action Blocked: You cannot delete your own active admin account!")
+        else:
+            conn = get_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM users WHERE email = %s", (email,))
+                conn.commit()
+                record_audit(current_user_email, "DELETE_USER", email, "Permanent profile deletion")
+                st.success("User deleted successfully!")
+                st.rerun()
+            except Exception as del_err:
+                st.error(f"Error deleting user: {del_err}")
+            finally:
+                release_connection(conn)
+                
+    if col2.button("Cancel", use_container_width=True):
+        st.rerun()
 
 # ==================== EMAIL OTP PASSWORD RESET MODAL ====================
 @st.dialog("🔐 Self-Service Password Reset (Email OTP)")
@@ -430,7 +542,6 @@ def email_otp_password_reset_dialog():
     if "emulated_otp_display" not in st.session_state:
         st.session_state.emulated_otp_display = ""
 
-    # STEP 1: REQUEST 6-DIGIT CODE
     if st.session_state.reset_stage == 1:
         st.markdown("<p style='font-size:13px; color:#605E5C;'>Enter your official email to receive a 6-digit verification code.</p>", unsafe_allow_html=True)
         with st.form("req_otp_form"):
@@ -455,7 +566,6 @@ def email_otp_password_reset_dialog():
                             generated_otp = f"{random.randint(100000, 999999)}"
                             expires_at = datetime.now() + timedelta(minutes=10)
                             
-                            # Invalidate old unused OTPs
                             cursor.execute("UPDATE password_resets SET is_used = TRUE WHERE email = %s", (clean_email,))
                             cursor.execute("""
                                 INSERT INTO password_resets (email, otp_code, expires_at, attempts, is_used)
@@ -465,7 +575,6 @@ def email_otp_password_reset_dialog():
                             
                             record_audit(clean_email, "OTP_REQUEST", clean_email, "Requested 6-digit recovery code")
                             
-                            # Dispatch OTP
                             success, mode = dispatch_otp_email(clean_email, generated_otp)
                             st.session_state.reset_target_email = clean_email
                             st.session_state.reset_stage = 2
@@ -476,11 +585,9 @@ def email_otp_password_reset_dialog():
                     finally:
                         release_connection(conn)
 
-    # STEP 2: VERIFY CODE & SET NEW PASSWORD
     elif st.session_state.reset_stage == 2:
         st.markdown(f"<p style='font-size:13px; color:#605E5C;'>Code sent to: <b>{st.session_state.reset_target_email}</b></p>", unsafe_allow_html=True)
         
-        # Display emulated testing banner if SMTP secrets are not yet added
         if st.session_state.emulated_otp_display:
             st.info(f"🧪 **Test Mode Active (No SMTP Configured Yet):**\n\nYour 6-Digit OTP is: **`{st.session_state.emulated_otp_display}`** *(Valid for 10m)*")
 
@@ -526,7 +633,6 @@ def email_otp_password_reset_dialog():
                                 conn.commit()
                                 st.error(f"❌ Invalid verification code. Attempts remaining: {2 - attempts}")
                             else:
-                                # Successful verification: update password and invalidate OTP
                                 new_hash = hash_password(new_pwd)
                                 cursor.execute("UPDATE users SET password_hash = %s WHERE email = %s", (new_hash, st.session_state.reset_target_email))
                                 cursor.execute("UPDATE password_resets SET is_used = TRUE WHERE id = %s", (rec_id,))
@@ -534,7 +640,6 @@ def email_otp_password_reset_dialog():
                                 
                                 record_audit(st.session_state.reset_target_email, "FORGOT_PWD_RESET_SUCCESS", st.session_state.reset_target_email, "Self-service recovery completed")
                                 
-                                # Reset flow state
                                 st.session_state.reset_stage = 1
                                 st.session_state.reset_target_email = ""
                                 st.session_state.emulated_otp_display = ""
@@ -703,7 +808,8 @@ PAGE_BADGE_MAP = {
     "history": "ACTIONED_OT",
     "dashboard": "TL_DASHBOARD",
     "reports": "REPORTS_CALC",
-    "admin": "ADMIN_PANEL"
+    "admin": "ADMIN_PANEL",
+    "guidelines": "POLICY_RULES"
 }
 current_badge = PAGE_BADGE_MAP.get(st.session_state.current_view, "OT_TRACKER")
 
@@ -1268,12 +1374,15 @@ elif st.session_state.current_view == "reports":
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================== 5. ADMIN PANEL ====================
+# ==================== 5. ADMIN PANEL (RESTORED FUNCTIONALITY) ====================
 elif st.session_state.current_view == "admin":
     st.markdown("""
         <div class="workspace-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">👥 User Management</div>
+                <div>
+                    <div style="font-size:20px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
+                    <div style="font-size:13px; color:#605E5C; margin-top:2px;">Single creation, bulk imports, directory edits, and security audit trail</div>
+                </div>
                 <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
     """, unsafe_allow_html=True)
@@ -1281,80 +1390,209 @@ elif st.session_state.current_view == "admin":
     if user['role'] != "Admin":
         st.error("Restricted to system administrators.")
     else:
-        with st.form("admin_create_form"):
-            u_c1, u_c2, u_c3, u_c4 = st.columns([2.5, 3, 2, 1.8])
-            with u_c1:
-                new_name = st.text_input("FULL NAME", placeholder="e.g. John Doe")
-            with u_c2:
-                new_email = st.text_input("GOOGLE EMAIL ADDRESS", placeholder="testuser@dl.excitel.in")
-            with u_c3:
-                new_role = st.selectbox("SYSTEM ROLE", options=["Employee", "TL", "Admin"])
-            with u_c4:
-                st.markdown("<br>", unsafe_allow_html=True)
-                create_btn = st.form_submit_button("+ Add User", type="primary", use_container_width=True)
-                
-            if create_btn:
-                if not new_name or not new_email:
-                    st.error("Please provide both name and email.")
-                else:
-                    conn = get_connection()
-                    try:
-                        cur = conn.cursor()
-                        cur.execute("""
-                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, role=EXCLUDED.role
-                        """, (new_email.strip().lower(), new_name.strip(), new_role, "EBND" + str(datetime.now().microsecond)[:5], "Excitel Admin", "TL01", hash_password("Password123")))
-                        conn.commit()
-                        record_audit(user['email'], "CREATE_USER", new_email.strip().lower(), f"Created role {new_role}")
-                        st.success(f"User {new_name} added successfully!")
-                        st.rerun()
-                    finally:
-                        release_connection(conn)
-
-        st.markdown("<br>", unsafe_allow_html=True)
+        tab_adm1, tab_adm2, tab_adm3 = st.tabs(["➕ Add New User / Bulk Upload", "📋 Active Users Directory & Management", "🔍 Security Audit Trail"])
         
-        conn = get_connection()
-        try:
-            users_list = pd.read_sql("SELECT name, email, role FROM users ORDER BY name ASC", conn)
-        finally:
-            release_connection(conn)
-            
-        for _, u_row in users_list.iterrows():
-            row_c1, row_c2, row_c3, row_c4 = st.columns([2.5, 3, 2, 1.8])
-            with row_c1:
-                st.write(f"**{u_row['name']}**")
-            with row_c2:
-                st.write(u_row['email'])
-            with row_c3:
-                role_bg = "#FEE2E2" if u_row['role'] == "Admin" else ("#FEF3C7" if u_row['role'] == "TL" else "#E0F2FE")
-                role_color = "#991B1B" if u_row['role'] == "Admin" else ("#92400E" if u_row['role'] == "TL" else "#0369A1")
-                st.markdown(f"<span style='background:{role_bg}; color:{role_color}; padding:4px 12px; border-radius:12px; font-weight:700; font-size:11px;'>{u_row['role'].upper()}</span>", unsafe_allow_html=True)
-            with row_c4:
-                if st.button("🗑️ Remove", key=f"del_u_{u_row['email']}", use_container_width=True):
-                    same_role_count = len(users_list[users_list['role'] == u_row['role']])
+        with tab_adm1:
+            col_u1, col_u2 = st.columns(2)
+            with col_u1:
+                with st.form("add_single_user_form"):
+                    st.markdown("### 👤 Create Single User")
+                    u_name = st.text_input("Full Name", placeholder="e.g. John Doe")
+                    u_email = st.text_input("Official Email ID (Login ID)", placeholder="e.g. testuser@dl.excitel.in")
+                    u_pass = st.text_input("Password", type="password", placeholder="Default password")
+                    u_role = st.selectbox("Role Assignment", options=["Employee", "TL", "Admin"])
+                    u_emp_id = st.text_input("Employee ID", placeholder="e.g. EBND04XXX")
+                    u_tl_name = st.text_input("Assigned Team Leader Name", placeholder="e.g. Nandini Puri")
+                    u_tl_id = st.text_input("Assigned Team Leader ID", placeholder="e.g. TL01")
                     
-                    if same_role_count <= 1:
-                        st.error(f"❌ Role Lock: Cannot delete {u_row['name']}. They are the only remaining '{u_row['role']}' in the system. Assign/transfer this role first.")
-                    elif u_row['email'] == user['email']:
-                        st.error("❌ Action Blocked: You cannot delete your own active Admin account. Transfer administrative rights to another user first.")
-                    else:
-                        conn = get_connection()
-                        try:
-                            cur = conn.cursor()
-                            cur.execute("DELETE FROM users WHERE email = %s", (u_row['email'],))
-                            conn.commit()
-                            record_audit(user['email'], "DELETE_USER", u_row['email'], f"Deleted {u_row['role']} profile")
-                            st.rerun()
-                        finally:
-                            release_connection(conn)
-            st.markdown("<hr style='border:none; border-top:1px solid #F0F2F9; margin:8px 0;'>", unsafe_allow_html=True)
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.form_submit_button("Save User ➕", type="primary", use_container_width=True):
+                        if u_name and u_email and u_pass and u_emp_id:
+                            conn = get_connection()
+                            try:
+                                cursor = conn.cursor()
+                                pass_hash = hash_password(u_pass)
+                                cursor.execute("""
+                                    INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                """, (u_email.strip().lower(), u_name.strip(), u_role, u_emp_id.strip(), u_tl_name.strip(), u_tl_id.strip(), pass_hash))
+                                conn.commit()
+                                record_audit(user['email'], "CREATE_USER", u_email.strip().lower(), f"Created role {u_role}")
+                                st.success(f"User {u_name} created successfully!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+                            finally:
+                                release_connection(conn)
+                        else:
+                            st.error("Please fill in Name, Email, Password, and Employee ID.")
+
+            with col_u2:
+                st.markdown("### 📁 Bulk Onboard via Excel / CSV")
+                st.markdown("""
+                    Upload an Excel (`.xlsx`) or CSV file containing user records. 
+                    <br>**Required Headers:** `email`, `name`, `role`, `emp_id`, `tl_name`, `tl_id`, `password`
+                """, unsafe_allow_html=True)
+                uploaded_file = st.file_uploader("Upload Employee Data File", type=["xlsx", "csv"])
+                if uploaded_file is not None:
+                    try:
+                        bulk_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+                        st.dataframe(bulk_df.head(3), use_container_width=True)
+                        if st.button("Process Bulk Import 🚀", type="primary", use_container_width=True):
+                            conn = get_connection()
+                            try:
+                                cursor = conn.cursor()
+                                success_count = 0
+                                for _, row in bulk_df.iterrows():
+                                    try:
+                                        email = str(row['email']).strip().lower()
+                                        name = str(row['name']).strip()
+                                        role = str(row['role']).strip()
+                                        emp_id = str(row['emp_id']).strip()
+                                        tl_name = str(row.get('tl_name', 'Unassigned')).strip()
+                                        tl_id = str(row.get('tl_id', '')).strip()
+                                        raw_pass = str(row.get('password', 'Password123'))
+                                        if raw_pass == 'nan' or not raw_pass:
+                                            raw_pass = 'Password123'
+                                        p_hash = hash_password(raw_pass)
+                                        cursor.execute("""
+                                            INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
+                                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                            ON CONFLICT (email) DO UPDATE SET 
+                                                name = EXCLUDED.name, role = EXCLUDED.role, emp_id = EXCLUDED.emp_id, 
+                                                tl_name = EXCLUDED.tl_name, tl_id = EXCLUDED.tl_id,
+                                                password_hash = EXCLUDED.password_hash
+                                        """, (email, name, role, emp_id, tl_name, tl_id, p_hash))
+                                        success_count += 1
+                                    except Exception:
+                                        continue
+                                conn.commit()
+                                record_audit(user['email'], "BULK_IMPORT", f"{success_count}_USERS", "Bulk file onboarding")
+                                st.success(f"Successfully processed {success_count} records!")
+                                st.rerun()
+                            finally:
+                                release_connection(conn)
+                    except Exception as file_err:
+                        st.error(f"Error reading file: {file_err}")
+
+        with tab_adm2:
+            st.markdown("### 📋 Active System Users Directory")
+            conn = get_connection()
+            try:
+                users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users ORDER BY name ASC", conn)
+            finally:
+                release_connection(conn)
+            
+            if users_df.empty:
+                st.info("No users found.")
+            else:
+                csv_export = users_df.to_csv(index=False).encode('utf-8')
+                st.download_button("Export Directory as CSV 📥", csv_export, "system_users_directory.csv", "text/csv")
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                st.markdown("<div class='table-header-custom'>", unsafe_allow_html=True)
+                header_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.4])
+                header_cols[0].markdown("**Name**")
+                header_cols[1].markdown("**Email**")
+                header_cols[2].markdown("**Role**")
+                header_cols[3].markdown("**Emp ID**")
+                header_cols[4].markdown("**TL Name**")
+                header_cols[5].markdown("**TL ID**")
+                header_cols[6].markdown("**Actions**")
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                for idx, row in users_df.iterrows():
+                    row_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.4])
+                    row_cols[0].write(row['name'])
+                    row_cols[1].write(row['email'])
+                    row_cols[2].write(row['role'])
+                    row_cols[3].write(row['emp_id'])
+                    row_cols[4].write(row['tl_name'])
+                    row_cols[5].write(row['tl_id'])
+                    
+                    act_col1, act_col2 = row_cols[6].columns(2)
+                    if act_col1.button("✏️", key=f"edit_btn_{row['email']}", help="Edit User Profile"):
+                        edit_user_dialog(row.to_dict())
+                    if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
+                        delete_user_dialog(row['email'], user['email'])
+                    st.markdown("<hr style='border:none; border-top: 1px solid #F0F2F9; margin: 6px 0;'>", unsafe_allow_html=True)
+
+        with tab_adm3:
+            st.markdown("### 🔍 Security Audit Trail")
+            conn = get_connection()
+            try:
+                audit_df = pd.read_sql("SELECT timestamp, performer, action, target, details FROM audit_logs ORDER BY id DESC LIMIT 50", conn)
+            finally:
+                release_connection(conn)
+            
+            if audit_df.empty:
+                st.info("No audit entries logged yet.")
+            else:
+                audit_df.columns = ['TIMESTAMP', 'ACTOR', 'SECURITY ACTION', 'TARGET', 'AUDIT DETAILS']
+                st.dataframe(audit_df, use_container_width=True, hide_index=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================== FOOTER ====================
+# ==================== 6. GUIDELINES & SECURITY POLICY PAGE ====================
+elif st.session_state.current_view == "guidelines":
+    st.markdown("""
+        <div class="workspace-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #0E2B5C; font-weight: 800;">📖 Portal Guidelines & Data Security Policy</h2>
+                    <p style="color: #605E5C; font-size: 13px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
+                </div>
+                <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            </div>
+
+            <div class="policy-card">
+                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 16px;">1. How to Apply & Workflow Guidelines</h3>
+                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                    <li><b>Employees:</b> Log in using your assigned official email credentials. Navigate to the <b>OT Form</b> tab, verify your shift timings, select your task category, and submit your overtime duration. Review past records in the <b>History</b> tab.</li>
+                    <li><b>Team Leaders (TL):</b> Monitor pending overtime submissions under the <b>Dashboard</b> tab. Verify actual units produced against the standard expected output target, and issue approvals or rejections accordingly. TLs may submit proxy requests for team members via the Form tab.</li>
+                    <li><b>Overtime Calculation:</b> Standard verified payouts are computed based on operational output targets and verified hours. Weekend and weekday rates follow the standardized enterprise rate card.</li>
+                </ul>
+            </div>
+
+            <div class="policy-card">
+                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 16px;">2. Operational Limits & Threshold Rules</h3>
+                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                    <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
+                    <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
+                    <li><b>Submission Window:</b> Claims must be entered within <b>48 hours</b> of shift completion. Older dates are locked out.</li>
+                    <li><b>Shift Overlap Prohibition:</b> Overtime hours must not intersect with regular scheduled shift timings under any circumstances. Overlapping submissions will be automatically blocked by system validation.</li>
+                    <li><b>Zero Deliverables Prohibited:</b> Overtime claims require measurable output. An actual output entry of 0 is not permitted on paid overtime requests.</li>
+                </ul>
+            </div>
+
+            <div class="policy-card" style="border-left: 5px solid #991B1B;">
+                <h3 style="color: #991B1B; margin-top: 0; font-size: 16px;">3. Data Security & Anti-Falsification Policy</h3>
+                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                    <li><b>Strict Prohibition of False Records:</b> Logging fabricated overtime hours, inflating output units, or misrepresenting timings is strictly prohibited and constitutes a direct breach of employment conduct.</li>
+                    <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system audit database.</li>
+                    <li><b>Self-Approval Prohibition:</b> Supervisors and managers cannot approve their own overtime claims.</li>
+                    <li><b>Disciplinary Enforcement:</b> Any user caught manipulating credentials, submitting fraudulent overtime, or circumventing system role permissions will be subject to immediate disciplinary review and loss of portal access.</li>
+                    <li><b>Credential Confidentiality:</b> Users are strictly accountable for maintaining the confidentiality of their portal passwords. Never share passwords or allow third parties to operate under your login session.</li>
+                </ul>
+            </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("⬅️ Return to Main Portal", use_container_width=True):
+        st.session_state.current_view = "portal"
+        st.rerun()
+        
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ==================== PERSISTENT FOOTER LINK ====================
+st.markdown("<br>", unsafe_allow_html=True)
+footer_col1, footer_col2, footer_col3 = st.columns([1, 2.5, 1])
+with footer_col2:
+    if st.button("📖 Read Portal Guidelines, Usage Rules & Data Security Policy", use_container_width=True):
+        st.session_state.current_view = "guidelines"
+        st.rerun()
+
 st.markdown("""
-    <div style="text-align:center; padding:20px 0; color:#605E5C; font-size:12px; font-weight:600;">
+    <div style="text-align:center; padding:15px 0 30px 0; color:#605E5C; font-size:12px; font-weight:600;">
         © Excitel Broadband Private Limited — Enterprise Overtime Tracking Protocol
     </div>
 """, unsafe_allow_html=True)
