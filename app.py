@@ -6,6 +6,10 @@ from datetime import datetime, date, timedelta
 import altair as alt
 import os
 import hashlib
+import random
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # ==================== AUTOMATIC THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -97,13 +101,23 @@ def init_db():
                 details TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id SERIAL PRIMARY KEY,
+                email TEXT,
+                otp_code TEXT,
+                expires_at TIMESTAMP,
+                attempts INTEGER DEFAULT 0,
+                is_used BOOLEAN DEFAULT FALSE
+            )
+        ''')
         default_pass_hash = hash_password("Password123")
         default_users = [
-            ("porwal.satyam1@gmail.com", "Satyam Porwal", "Admin", "EBND02324", "Nandini Puri", "TL01", default_pass_hash),
+            ("testuser@dl.excitel.in", "Excitel Admin", "Admin", "EBND00001", "Nandini Puri", "TL01", default_pass_hash),
             ("ritu.mandal@dl.excitel.in", "Ritu Mandal", "TL", "EBND04635", "Nandini Puri", "TL01", default_pass_hash),
             ("jamal.khan@dl.excitel.in", "Jamal Khan", "TL", "EBND04471", "Nandini Puri", "TL01", default_pass_hash),
             ("abhishek.pandey@dl.excitel.in", "Abhishek Pandey", "TL", "EBND04472", "Nandini Puri", "TL01", default_pass_hash),
-            ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Satyam Porwal", "TL02", default_pass_hash)
+            ("basu.porwal@dl.excitel.in", "Basu Porwal", "Employee", "EBND04475", "Excitel Admin", "TL02", default_pass_hash)
         ]
         cursor.executemany("""
             INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
@@ -130,6 +144,54 @@ def record_audit(performer, action, target, details=""):
     finally:
         release_connection(conn)
 
+# ==================== EMAIL OTP DISPATCH ENGINE (SMART FALLBACK) ====================
+def dispatch_otp_email(recipient_email, otp_code):
+    """
+    Sends live email if [smtp] secrets are configured in Streamlit.
+    Returns (success: bool, method: str) where method is 'SMTP' or 'FALLBACK_EMULATED'
+    """
+    if "smtp" in st.secrets:
+        try:
+            smtp_server = st.secrets["smtp"]["server"]
+            smtp_port = int(st.secrets["smtp"]["port"])
+            sender_email = st.secrets["smtp"]["sender_email"]
+            sender_password = st.secrets["smtp"]["sender_password"]
+            
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"Excitel OT Portal - Verification Code: {otp_code}"
+            msg["From"] = f"Excitel Security <{sender_email}>"
+            msg["To"] = recipient_email
+            
+            html_body = f"""
+            <html>
+                <body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #F4F6FB; margin: 0; padding: 20px;">
+                    <div style="max-width: 500px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border-top: 5px solid #FF6B00; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                        <h2 style="color: #0E2B5C; margin: 0 0 10px 0;">Password Reset Request</h2>
+                        <p style="color: #605E5C; font-size: 14px;">Use the following One-Time Passcode (OTP) to reset your Excitel Overtime Portal access credentials:</p>
+                        <div style="text-align: center; margin: 25px 0;">
+                            <span style="font-size: 32px; font-weight: 800; color: #FF6B00; letter-spacing: 6px; background: #FFF4EC; padding: 10px 24px; border-radius: 8px; border: 1px dashed #FF6B00;">{otp_code}</span>
+                        </div>
+                        <p style="color: #605E5C; font-size: 12px;">This code is valid for <b>10 minutes</b>. If you did not request this code, please inform your system administrator immediately.</p>
+                        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;">
+                        <p style="color: #94A3B8; font-size: 11px; text-align: center;">Excitel Broadband Private Limited — Automated Security Protocol</p>
+                    </div>
+                </body>
+            </html>
+            """
+            msg.attach(MIMEText(html_body, "html"))
+            
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, recipient_email, msg.as_string())
+            return True, "SMTP"
+        except Exception as e:
+            print(f"SMTP Dispatch Error: {e}")
+            return False, "SMTP_FAILED"
+            
+    # Fallback to dev emulation when no SMTP secrets exist yet
+    return True, "FALLBACK_EMULATED"
+
 # ==================== PAGE CONFIG & CSS STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
@@ -137,7 +199,6 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap');
         
-        /* Reset Body / Canvas */
         html, body, .stApp {
             background-color: #F4F6FB !important;
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
@@ -156,7 +217,6 @@ st.markdown("""
             max-width: 100% !important;
         }
 
-        /* Edge-to-Edge Sticky Topbar */
         .excitel-topbar {
             background: #FFFFFF;
             width: 100%;
@@ -205,7 +265,6 @@ st.markdown("""
             padding-left: 18px;
         }
         
-        /* Floating Dark Navy Pill Navigation Bar */
         .nav-pill-wrapper {
             background: #1F3A60;
             border-radius: 35px;
@@ -227,7 +286,6 @@ st.markdown("""
             padding-left: 12px;
         }
 
-        /* Centered White Workspace Card */
         .workspace-card {
             background: #FFFFFF;
             border-radius: 20px;
@@ -238,7 +296,6 @@ st.markdown("""
             box-shadow: 0 8px 30px rgba(0,0,0,0.06);
         }
 
-        /* Fixed-Width Enterprise Form Card */
         div[data-testid="stForm"] {
             background: #FFFFFF !important;
             border: 1px solid #E2E8F0 !important;
@@ -249,55 +306,54 @@ st.markdown("""
             margin: 0 auto !important;
         }
 
-        /* ==================== CRISP CRM INPUT OUTLINES ==================== */
-        /* Targets every text, password, select, and number input */
+        /* High-Contrast Corporate Form Fields */
         div[data-baseweb="input"],
         div[data-baseweb="base-input"],
         div[data-testid="stTextInputRootElement"],
         div[data-testid="stTextInput"] > div > div,
         div[data-testid="stPasswordInput"] > div > div,
-        div[data-baseweb="select"] > div {
+        div[data-baseweb="select"] > div,
+        div[data-testid="stDateInput"] > div > div,
+        div[data-testid="stTimeInput"] > div > div,
+        div[data-testid="stNumberInput"] > div > div {
             border: 1.5px solid #CBD5E1 !important;
             border-radius: 8px !important;
             background-color: #F8FAFC !important;
             transition: all 0.2s ease-in-out !important;
         }
 
-        /* Input typography & placeholder colors */
-        div[data-testid="stTextInput"] input,
-        div[data-testid="stPasswordInput"] input {
+        input {
             color: #0E2B5C !important;
             font-size: 14px !important;
             font-weight: 500 !important;
         }
-        
-        div[data-testid="stTextInput"] input::placeholder,
-        div[data-testid="stPasswordInput"] input::placeholder {
+        input::placeholder {
             color: #94A3B8 !important;
             font-size: 13px !important;
         }
 
-        /* Interactive Focus State with Excitel Orange Glow */
         div[data-baseweb="input"]:focus-within,
         div[data-baseweb="base-input"]:focus-within,
         div[data-testid="stTextInputRootElement"]:focus-within,
         div[data-testid="stTextInput"] > div > div:focus-within,
         div[data-testid="stPasswordInput"] > div > div:focus-within,
-        div[data-baseweb="select"] > div:focus-within {
+        div[data-baseweb="select"] > div:focus-within,
+        div[data-testid="stDateInput"] > div > div:focus-within,
+        div[data-testid="stTimeInput"] > div > div:focus-within,
+        div[data-testid="stNumberInput"] > div > div:focus-within {
             border-color: #FF6B00 !important;
             background-color: #FFFFFF !important;
             box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18) !important;
         }
 
-        /* Form Labels */
         div[data-testid="stWidgetLabel"] label p {
             color: #0E2B5C !important;
             font-weight: 700 !important;
-            font-size: 13px !important;
-            letter-spacing: 0.3px !important;
+            font-size: 12px !important;
+            letter-spacing: 0.4px !important;
+            text-transform: uppercase !important;
         }
 
-        /* ==================== BRAND BUTTON STYLING ==================== */
         div[data-testid="stFormSubmitButton"] > button,
         .stButton > button {
             background: #FF6B00 !important;
@@ -318,7 +374,6 @@ st.markdown("""
             box-shadow: 0 6px 18px rgba(224, 93, 0, 0.35) !important;
         }
 
-        /* 5 Top Summary Metric Cards */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -355,7 +410,6 @@ st.markdown("""
         .kpi-cyan { border-bottom: 4px solid #0EA5E9; color: #1F3A60; }
         .kpi-blue { border-bottom: 4px solid #2563EB; color: #1F3A60; }
 
-        /* Dashed Proxy Section on OT Form */
         .proxy-container {
             border: 2px dashed #2563EB;
             border-radius: 12px;
@@ -365,6 +419,194 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
+# ==================== EMAIL OTP PASSWORD RESET MODAL ====================
+@st.dialog("🔐 Self-Service Password Reset (Email OTP)")
+def email_otp_password_reset_dialog():
+    if "reset_stage" not in st.session_state:
+        st.session_state.reset_stage = 1
+    if "reset_target_email" not in st.session_state:
+        st.session_state.reset_target_email = ""
+    if "emulated_otp_display" not in st.session_state:
+        st.session_state.emulated_otp_display = ""
+
+    # STEP 1: REQUEST 6-DIGIT CODE
+    if st.session_state.reset_stage == 1:
+        st.markdown("<p style='font-size:13px; color:#605E5C;'>Enter your official email to receive a 6-digit verification code.</p>", unsafe_allow_html=True)
+        with st.form("req_otp_form"):
+            r_email = st.text_input("Official Email ID", placeholder="testuser@dl.excitel.in")
+            st.markdown("<br>", unsafe_allow_html=True)
+            send_otp_btn = st.form_submit_button("Send Verification Code 📩", use_container_width=True)
+
+            if send_otp_btn:
+                clean_email = r_email.strip().lower()
+                if not clean_email:
+                    st.error("Please enter your official email.")
+                else:
+                    conn = get_connection()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT name FROM users WHERE email = %s", (clean_email,))
+                        user_match = cursor.fetchone()
+                        
+                        if not user_match:
+                            st.error("Email not found in registered directory.")
+                        else:
+                            generated_otp = f"{random.randint(100000, 999999)}"
+                            expires_at = datetime.now() + timedelta(minutes=10)
+                            
+                            # Invalidate old unused OTPs
+                            cursor.execute("UPDATE password_resets SET is_used = TRUE WHERE email = %s", (clean_email,))
+                            cursor.execute("""
+                                INSERT INTO password_resets (email, otp_code, expires_at, attempts, is_used)
+                                VALUES (%s, %s, %s, 0, FALSE)
+                            """, (clean_email, generated_otp, expires_at))
+                            conn.commit()
+                            
+                            record_audit(clean_email, "OTP_REQUEST", clean_email, "Requested 6-digit recovery code")
+                            
+                            # Dispatch OTP
+                            success, mode = dispatch_otp_email(clean_email, generated_otp)
+                            st.session_state.reset_target_email = clean_email
+                            st.session_state.reset_stage = 2
+                            
+                            if mode == "FALLBACK_EMULATED":
+                                st.session_state.emulated_otp_display = generated_otp
+                            st.rerun()
+                    finally:
+                        release_connection(conn)
+
+    # STEP 2: VERIFY CODE & SET NEW PASSWORD
+    elif st.session_state.reset_stage == 2:
+        st.markdown(f"<p style='font-size:13px; color:#605E5C;'>Code sent to: <b>{st.session_state.reset_target_email}</b></p>", unsafe_allow_html=True)
+        
+        # Display emulated testing banner if SMTP secrets are not yet added
+        if st.session_state.emulated_otp_display:
+            st.info(f"🧪 **Test Mode Active (No SMTP Configured Yet):**\n\nYour 6-Digit OTP is: **`{st.session_state.emulated_otp_display}`** *(Valid for 10m)*")
+
+        with st.form("verify_otp_form"):
+            input_otp = st.text_input("6-Digit Verification Code", placeholder="e.g. 842109", max_chars=6)
+            new_pwd = st.text_input("New Password", type="password", placeholder="Enter new password (min 6 characters)")
+            conf_pwd = st.text_input("Confirm New Password", type="password", placeholder="Re-enter new password")
+            st.markdown("<br>", unsafe_allow_html=True)
+            verify_btn = st.form_submit_button("Verify & Change Password ✅", use_container_width=True)
+
+            if verify_btn:
+                if not input_otp or not new_pwd or not conf_pwd:
+                    st.error("Please fill in all verification fields.")
+                elif len(new_pwd) < 6:
+                    st.error("New password must be at least 6 characters.")
+                elif new_pwd != conf_pwd:
+                    st.error("Passwords do not match.")
+                else:
+                    conn = get_connection()
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            SELECT id, otp_code, expires_at, attempts, is_used 
+                            FROM password_resets 
+                            WHERE email = %s AND is_used = FALSE 
+                            ORDER BY id DESC LIMIT 1
+                        """, (st.session_state.reset_target_email,))
+                        reset_record = cursor.fetchone()
+                        
+                        if not reset_record:
+                            st.error("No active reset session found. Please request a new code.")
+                        else:
+                            rec_id, valid_code, expires_at, attempts, is_used = reset_record
+                            
+                            if datetime.now() > expires_at:
+                                st.error("❌ Verification code expired (10m limit). Please request a new code.")
+                            elif attempts >= 3:
+                                cursor.execute("UPDATE password_resets SET is_used = TRUE WHERE id = %s", (rec_id,))
+                                conn.commit()
+                                st.error("❌ Too many incorrect attempts. Code invalidated.")
+                            elif input_otp.strip() != valid_code:
+                                cursor.execute("UPDATE password_resets SET attempts = attempts + 1 WHERE id = %s", (rec_id,))
+                                conn.commit()
+                                st.error(f"❌ Invalid verification code. Attempts remaining: {2 - attempts}")
+                            else:
+                                # Successful verification: update password and invalidate OTP
+                                new_hash = hash_password(new_pwd)
+                                cursor.execute("UPDATE users SET password_hash = %s WHERE email = %s", (new_hash, st.session_state.reset_target_email))
+                                cursor.execute("UPDATE password_resets SET is_used = TRUE WHERE id = %s", (rec_id,))
+                                conn.commit()
+                                
+                                record_audit(st.session_state.reset_target_email, "FORGOT_PWD_RESET_SUCCESS", st.session_state.reset_target_email, "Self-service recovery completed")
+                                
+                                # Reset flow state
+                                st.session_state.reset_stage = 1
+                                st.session_state.reset_target_email = ""
+                                st.session_state.emulated_otp_display = ""
+                                st.success("Password reset successfully! Please sign in with your new password.")
+                                st.rerun()
+                    finally:
+                        release_connection(conn)
+
+        if st.button("⬅️ Request New Code", use_container_width=True):
+            st.session_state.reset_stage = 1
+            st.session_state.emulated_otp_display = ""
+            st.rerun()
+
+# ==================== LOGGED-IN ADMIN/USER PASSWORD UPDATE MODAL ====================
+@st.dialog("🔑 Password Management")
+def authenticated_password_dialog(logged_in_user):
+    st.markdown("<p style='font-size:13px; color:#605E5C;'>Update portal credentials with audit logging.</p>", unsafe_allow_html=True)
+    
+    conn = get_connection()
+    try:
+        users_df = pd.read_sql("SELECT email, name, role, password_hash FROM users", conn)
+    finally:
+        release_connection(conn)
+
+    user_role = logged_in_user['role']
+    
+    with st.form("auth_pwd_modal_form"):
+        if user_role == "Admin":
+            target_email = st.selectbox("Select Account", options=users_df['email'].tolist(), index=users_df['email'].tolist().index(logged_in_user['email']))
+        else:
+            target_email = logged_in_user['email']
+            st.text_input("Account Email", value=target_email, disabled=True)
+
+        require_old = not (user_role == "Admin" and target_email != logged_in_user['email'])
+        if require_old:
+            curr_pass = st.text_input("Current Password", type="password", placeholder="Verify existing password")
+            
+        new_pass = st.text_input("New Password", type="password", placeholder="Min 6 characters")
+        conf_pass = st.text_input("Confirm New Password", type="password", placeholder="Re-enter new password")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        save_btn = st.form_submit_button("Update Password 💾", use_container_width=True)
+        
+        if save_btn:
+            if not new_pass or not conf_pass:
+                st.error("Please fill in all fields.")
+            elif len(new_pass) < 6:
+                st.error("Password must be at least 6 characters.")
+            elif new_pass != conf_pass:
+                st.error("Passwords do not match.")
+            else:
+                user_rec = users_df[users_df['email'] == target_email]
+                if user_rec.empty:
+                    st.error("User record missing.")
+                else:
+                    if require_old:
+                        cur_hash = user_rec.iloc[0]['password_hash']
+                        if not ((cur_hash == hash_password(curr_pass)) or (cur_hash == hashlib.sha256(curr_pass.encode()).hexdigest())):
+                            st.error("Current password incorrect.")
+                            return
+                    
+                    new_hash = hash_password(new_pass)
+                    conn = get_connection()
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("UPDATE users SET password_hash = %s WHERE email = %s", (new_hash, target_email))
+                        conn.commit()
+                        record_audit(logged_in_user['email'], "ADMIN_PASSWORD_CHANGE", target_email, "Credentials updated")
+                        st.success("Password updated successfully!")
+                        st.rerun()
+                    finally:
+                        release_connection(conn)
 
 # ==================== SESSION STATE AUTHENTICATION ====================
 if 'authenticated' not in st.session_state:
@@ -378,7 +620,7 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY (STANDARD FIXED CRM CARD) ====================
+# ==================== LOGIN GATEWAY ====================
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="excitel-topbar">
@@ -403,14 +645,14 @@ if not st.session_state.authenticated:
                 </div>
             """, unsafe_allow_html=True)
             
-            login_email = st.text_input("Official Email ID", placeholder="e.g. satyam.porwal@excitel.com")
+            login_email = st.text_input("Official Email ID", placeholder="e.g. testuser@dl.excitel.in")
             login_password = st.text_input("Password", type="password", placeholder="••••••••••••")
             st.markdown("<br>", unsafe_allow_html=True)
             submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
 
             if submit_login:
                 if not login_email or not login_password:
-                    st.error("Please provide both email and password.")
+                    st.error("Please enter both email and password.")
                 else:
                     conn = get_connection()
                     try:
@@ -434,6 +676,10 @@ if not st.session_state.authenticated:
                             st.error("❌ Incorrect password.")
                     else:
                         st.error("❌ Email not registered in the system.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔑 Forgot / Change Password via Email OTP", use_container_width=True):
+            email_otp_password_reset_dialog()
     st.stop()
 
 # ==================== FETCH LOGGED-IN USER ====================
@@ -447,7 +693,7 @@ def get_logged_in_user():
             return {"email": res[0], "name": res[1], "role": res[2], "empId": res[3], "tlName": res[4], "tlId": res[5]}
     finally:
         release_connection(conn)
-    return {"email": st.session_state.user_email, "name": st.session_state.user_name, "role": st.session_state.user_role, "empId": "N/A", "tlName": "Unassigned", "tlId": ""}
+    return {"email": st.session_state.user_email, "name": st.session_state.user_name, "role": st.session_state.user_role, "empId": "EBND00001", "tlName": "Unassigned", "tlId": ""}
 
 user = get_logged_in_user()
 
@@ -506,7 +752,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-nav_cols = st.columns([1, 1, 1, 1, 1, 0.8])
+nav_cols = st.columns([1, 1, 1, 1, 1, 0.9, 0.8])
 
 with nav_cols[0]:
     if st.button("📄 OT Form", key="nav_form", use_container_width=True):
@@ -537,6 +783,10 @@ if user['role'] == "Admin":
             st.rerun()
 
 with nav_cols[5]:
+    if st.button("🔑 Password", key="nav_pwd", use_container_width=True):
+        authenticated_password_dialog(user)
+
+with nav_cols[6]:
     if st.button("🚪 Logout", key="nav_out", use_container_width=True):
         record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
         st.session_state.authenticated = False
@@ -1036,7 +1286,7 @@ elif st.session_state.current_view == "admin":
             with u_c1:
                 new_name = st.text_input("FULL NAME", placeholder="e.g. John Doe")
             with u_c2:
-                new_email = st.text_input("GOOGLE EMAIL ADDRESS", placeholder="john.doe@excitel.com")
+                new_email = st.text_input("GOOGLE EMAIL ADDRESS", placeholder="testuser@dl.excitel.in")
             with u_c3:
                 new_role = st.selectbox("SYSTEM ROLE", options=["Employee", "TL", "Admin"])
             with u_c4:
@@ -1054,7 +1304,7 @@ elif st.session_state.current_view == "admin":
                             INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash)
                             VALUES (%s, %s, %s, %s, %s, %s, %s)
                             ON CONFLICT (email) DO UPDATE SET name=EXCLUDED.name, role=EXCLUDED.role
-                        """, (new_email.strip().lower(), new_name.strip(), new_role, "EBND" + str(datetime.now().microsecond)[:5], "Nandini Puri", "TL01", hash_password("Password123")))
+                        """, (new_email.strip().lower(), new_name.strip(), new_role, "EBND" + str(datetime.now().microsecond)[:5], "Excitel Admin", "TL01", hash_password("Password123")))
                         conn.commit()
                         record_audit(user['email'], "CREATE_USER", new_email.strip().lower(), f"Created role {new_role}")
                         st.success(f"User {new_name} added successfully!")
@@ -1082,15 +1332,19 @@ elif st.session_state.current_view == "admin":
                 st.markdown(f"<span style='background:{role_bg}; color:{role_color}; padding:4px 12px; border-radius:12px; font-weight:700; font-size:11px;'>{u_row['role'].upper()}</span>", unsafe_allow_html=True)
             with row_c4:
                 if st.button("🗑️ Remove", key=f"del_u_{u_row['email']}", use_container_width=True):
-                    if u_row['email'] == user['email']:
-                        st.error("Cannot delete your own active admin account.")
+                    same_role_count = len(users_list[users_list['role'] == u_row['role']])
+                    
+                    if same_role_count <= 1:
+                        st.error(f"❌ Role Lock: Cannot delete {u_row['name']}. They are the only remaining '{u_row['role']}' in the system. Assign/transfer this role first.")
+                    elif u_row['email'] == user['email']:
+                        st.error("❌ Action Blocked: You cannot delete your own active Admin account. Transfer administrative rights to another user first.")
                     else:
                         conn = get_connection()
                         try:
                             cur = conn.cursor()
                             cur.execute("DELETE FROM users WHERE email = %s", (u_row['email'],))
                             conn.commit()
-                            record_audit(user['email'], "DELETE_USER", u_row['email'], "Removed from directory")
+                            record_audit(user['email'], "DELETE_USER", u_row['email'], f"Deleted {u_row['role']} profile")
                             st.rerun()
                         finally:
                             release_connection(conn)
