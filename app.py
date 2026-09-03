@@ -137,7 +137,7 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap');
         
-        /* Eliminate all default margin and padding to stick header flush to top edge */
+        /* Reset Body / Canvas */
         html, body, .stApp {
             background-color: #F4F6FB !important;
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
@@ -156,7 +156,7 @@ st.markdown("""
             max-width: 100% !important;
         }
 
-        /* Full Width Edge-to-Edge Sticky Topbar */
+        /* Edge-to-Edge Sticky Topbar */
         .excitel-topbar {
             background: #FFFFFF;
             width: 100%;
@@ -205,7 +205,7 @@ st.markdown("""
             padding-left: 18px;
         }
         
-        /* Floating Dark Navy Pill Command Navigation Bar */
+        /* Floating Dark Navy Pill Navigation Bar */
         .nav-pill-wrapper {
             background: #1F3A60;
             border-radius: 35px;
@@ -227,7 +227,7 @@ st.markdown("""
             padding-left: 12px;
         }
 
-        /* Disciplined Centered White Workspace Card */
+        /* Centered White Workspace Card */
         .workspace-card {
             background: #FFFFFF;
             border-radius: 20px;
@@ -238,15 +238,84 @@ st.markdown("""
             box-shadow: 0 8px 30px rgba(0,0,0,0.06);
         }
 
-        /* Fixed-Width Form Container Card Styling */
+        /* Fixed-Width Enterprise Form Card */
         div[data-testid="stForm"] {
             background: #FFFFFF !important;
-            border: 1px solid #E5E7EB !important;
+            border: 1px solid #E2E8F0 !important;
             border-top: 5px solid #FF6B00 !important;
             border-radius: 20px !important;
-            padding: 34px 38px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06) !important;
+            padding: 38px 42px !important;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.07) !important;
             margin: 0 auto !important;
+        }
+
+        /* ==================== CRISP CRM INPUT OUTLINES ==================== */
+        /* Targets every text, password, select, and number input */
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"],
+        div[data-testid="stTextInputRootElement"],
+        div[data-testid="stTextInput"] > div > div,
+        div[data-testid="stPasswordInput"] > div > div,
+        div[data-baseweb="select"] > div {
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 8px !important;
+            background-color: #F8FAFC !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+
+        /* Input typography & placeholder colors */
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stPasswordInput"] input {
+            color: #0E2B5C !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+        }
+        
+        div[data-testid="stTextInput"] input::placeholder,
+        div[data-testid="stPasswordInput"] input::placeholder {
+            color: #94A3B8 !important;
+            font-size: 13px !important;
+        }
+
+        /* Interactive Focus State with Excitel Orange Glow */
+        div[data-baseweb="input"]:focus-within,
+        div[data-baseweb="base-input"]:focus-within,
+        div[data-testid="stTextInputRootElement"]:focus-within,
+        div[data-testid="stTextInput"] > div > div:focus-within,
+        div[data-testid="stPasswordInput"] > div > div:focus-within,
+        div[data-baseweb="select"] > div:focus-within {
+            border-color: #FF6B00 !important;
+            background-color: #FFFFFF !important;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18) !important;
+        }
+
+        /* Form Labels */
+        div[data-testid="stWidgetLabel"] label p {
+            color: #0E2B5C !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            letter-spacing: 0.3px !important;
+        }
+
+        /* ==================== BRAND BUTTON STYLING ==================== */
+        div[data-testid="stFormSubmitButton"] > button,
+        .stButton > button {
+            background: #FF6B00 !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            padding: 10px 20px !important;
+            box-shadow: 0 4px 14px rgba(255, 107, 0, 0.28) !important;
+            transition: background 0.2s ease, transform 0.1s ease !important;
+            width: 100% !important;
+        }
+
+        div[data-testid="stFormSubmitButton"] > button:hover,
+        .stButton > button:hover {
+            background: #E05D00 !important;
+            box-shadow: 0 6px 18px rgba(224, 93, 0, 0.35) !important;
         }
 
         /* 5 Top Summary Metric Cards */
@@ -294,25 +363,6 @@ st.markdown("""
             background: #F8FAFF;
             margin-bottom: 20px;
         }
-
-        /* Standardized Text Inputs */
-        div[data-baseweb="input"] {
-            border-radius: 8px !important;
-            border: 1px solid #D1D5DB !important;
-            background-color: #FFFFFF !important;
-        }
-        div[data-baseweb="input"]:focus-within {
-            border-color: #FF6B00 !important;
-        }
-
-        /* Standardized Rounded Pill Buttons */
-        .stButton>button {
-            border-radius: 20px !important;
-            font-weight: 700 !important;
-            border: none !important;
-            padding: 8px 18px !important;
-            width: 100% !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -328,9 +378,8 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY (STANDARD FIXED WIDTH) ====================
+# ==================== LOGIN GATEWAY (STANDARD FIXED CRM CARD) ====================
 if not st.session_state.authenticated:
-    # Full-bleed topbar positioned right at the top
     st.markdown("""
         <div class="excitel-topbar">
             <div class="brand-cluster">
@@ -343,26 +392,25 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    # Use centered disciplined column constraint (avoids full-width stretching)
-    col1, col2, col3 = st.columns([1, 1.25, 1])
+    col1, col2, col3 = st.columns([1, 1.15, 1])
     with col2:
         with st.form("login_form"):
             st.markdown("""
-                <div style="text-align: center; margin-bottom: 20px;">
+                <div style="text-align: center; margin-bottom: 24px;">
                     <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
                     <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">Overtime Tracking Portal</div>
                     <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
                 </div>
             """, unsafe_allow_html=True)
             
-            login_email = st.text_input("Official Email ID")
-            login_password = st.text_input("Password", type="password")
+            login_email = st.text_input("Official Email ID", placeholder="e.g. satyam.porwal@excitel.com")
+            login_password = st.text_input("Password", type="password", placeholder="••••••••••••")
             st.markdown("<br>", unsafe_allow_html=True)
             submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
 
             if submit_login:
                 if not login_email or not login_password:
-                    st.error("Please enter both email and password.")
+                    st.error("Please provide both email and password.")
                 else:
                     conn = get_connection()
                     try:
