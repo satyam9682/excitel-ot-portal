@@ -205,7 +205,7 @@ st.markdown("""
 
         /* Fixed Standard Content Width */
         .block-container {
-            max-width: 960px !important;
+            max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
             padding-top: 80px !important;
@@ -329,18 +329,18 @@ st.markdown("""
             margin-bottom: 2px !important;
         }
 
-        /* Clean Unified White Card Container */
+        /* Clean Unified White Card Container (No Ghost Boxes) */
         .workspace-card-box {
             background: #FFFFFF;
             border-radius: 20px;
             border: 1px solid #E2E8F0;
             border-top: 6px solid #FF6B00;
-            padding: 36px 44px;
+            padding: 38px 46px;
             box-shadow: 0 6px 24px rgba(0,0,0,0.04);
             margin-bottom: 25px;
         }
 
-        /* Bulk Upload Specific Styling matching screenshot */
+        /* Bulk Upload Specific Styling */
         .bulk-card-header {
             font-size: 22px;
             font-weight: 800;
@@ -637,7 +637,7 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY ====================
+# ==================== LOGIN GATEWAY (UNIFIED & CLEAN) ====================
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="excitel-topbar">
@@ -651,7 +651,7 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    col1, col2, col3 = st.columns([1, 1.4, 1])
     with col2:
         st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
         st.markdown("""
@@ -1281,7 +1281,7 @@ elif st.session_state.current_view == "reports":
         st.info("No records match the requested period.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ==================== 5. ADMIN PANEL (RESTORED TWO-COLUMN LAYOUT matching image_2cd40b.png) ====================
+# ==================== 5. ADMIN PANEL ====================
 elif st.session_state.current_view == "admin":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     
