@@ -1,11 +1,12 @@
 import streamlit as st
 import psycopg2
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from fpdf import FPDF
 import altair as alt
 import os
 import hashlib
+import time
 
 # ==================== AUTOMATIC LIGHT THEME CONFIG ====================
 os.makedirs(".streamlit", exist_ok=True)
@@ -75,6 +76,16 @@ def init_db():
             approved_at TEXT
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            recipient_email TEXT,
+            message TEXT,
+            created_at TEXT,
+            is_read BOOLEAN DEFAULT FALSE
+        )
+    ''')
     
     default_pass_hash = hash_password("Password123")
     default_users = [
@@ -94,6 +105,20 @@ def init_db():
     conn.close()
 
 init_db()
+
+# Helper to dispatch in-app notifications
+def send_notification(recipient_email, message):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO notifications (recipient_email, message, created_at) VALUES (%s, %s, %s)",
+            (recipient_email.lower().strip(), message, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Notification Error: {e}")
 
 # ==================== PAGE CONFIG & STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
@@ -143,6 +168,14 @@ st.markdown("""
             border-bottom: 2px solid #E1DFDD;
             margin-bottom: 12px;
         }
+        .notif-box {
+            background-color: #EFF6FF;
+            border-left: 4px solid #1E3A8A;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
         [data-testid="stSidebar"] {
             background-color: #FFFFFF;
@@ -151,7 +184,33 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ==================== MODAL DIALOGS FOR EDIT & DELETE ====================
+# ==================== SESSION TIMEOUT LOGIC ====================
+INACTIVITY_TIMEOUT_SECONDS = 1800  # 30 Minutes
+
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = ""
+if 'user_role' not in st.session_state:
+    st.session_state.user_role = ""
+if 'user_name' not in st.session_state:
+    st.session_state.user_name = ""
+if 'current_view' not in st.session_state:
+    st.session_state.current_view = "portal"
+if 'last_activity' not in st.session_state:
+    st.session_state.last_activity = time.time()
+
+# Check for session expiration
+if st.session_state.authenticated:
+    if time.time() - st.session_state.last_activity > INACTIVITY_TIMEOUT_SECONDS:
+        st.session_state.authenticated = False
+        st.session_state.user_email = ""
+        st.warning("⏱️ Session timed out due to 30 minutes of inactivity. Please sign in again.")
+        st.rerun()
+    else:
+        st.session_state.last_activity = time.time()
+
+# ==================== MODAL DIALOGS ====================
 @st.dialog("✏️ Edit User Profile")
 def edit_user_dialog(user_dict):
     st.markdown(f"<div style='color: #605E5C; margin-bottom: 15px;'>Updating records for: <b>{user_dict['email']}</b></div>", unsafe_allow_html=True)
@@ -223,18 +282,6 @@ def delete_user_dialog(email, current_user_email):
     if col2.button("Cancel", use_container_width=True):
         st.rerun()
 
-# ==================== SESSION STATE AUTHENTICATION ====================
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-if 'user_email' not in st.session_state:
-    st.session_state.user_email = ""
-if 'user_role' not in st.session_state:
-    st.session_state.user_role = ""
-if 'user_name' not in st.session_state:
-    st.session_state.user_name = ""
-if 'current_view' not in st.session_state:
-    st.session_state.current_view = "portal"
-
 # ==================== LOGIN GATEWAY ====================
 if not st.session_state.authenticated:
     col_l1, col_l2, col_l3 = st.columns([1, 1.2, 1])
@@ -270,6 +317,7 @@ if not st.session_state.authenticated:
                             st.session_state.user_email = login_email.strip().lower()
                             st.session_state.user_name = db_name
                             st.session_state.user_role = db_role
+                            st.session_state.last_activity = time.time()
                             st.session_state.current_view = "portal"
                             st.success("Login successful! Loading portal...")
                             st.rerun()
@@ -292,10 +340,23 @@ def get_logged_in_user():
 
 user = get_logged_in_user()
 
-# ==================== SIDEBAR ====================
+# ==================== SIDEBAR & NOTIFICATIONS ====================
 st.sidebar.markdown("<div class='brand-logo' style='margin-bottom:15px;'>EXCIT<span>EL</span></div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"**Signed In As:**  \n`{user['name']}`")
 st.sidebar.markdown(f"**Role:** `{user['role']}`")
+
+st.sidebar.markdown("---")
+# Notifications Panel
+conn = get_connection()
+notifs_df = pd.read_sql("SELECT message, created_at FROM notifications WHERE recipient_email = %s ORDER BY id DESC LIMIT 5", conn, params=(user['email'],))
+conn.close()
+
+with st.sidebar.expander(f"🔔 Alerts & Notifications ({len(notifs_df)})", expanded=not notifs_df.empty):
+    if notifs_df.empty:
+        st.write("No new alerts.")
+    else:
+        for _, n_row in notifs_df.iterrows():
+            st.markdown(f"<div class='notif-box'><b>{n_row['created_at']}</b><br>{n_row['message']}</div>", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 if st.sidebar.button("🚪 Sign Out", use_container_width=True):
@@ -305,10 +366,9 @@ if st.sidebar.button("🚪 Sign Out", use_container_width=True):
     st.session_state.user_name = ""
     st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.info("🔒 **Secure Session Active:** All actions are logged and authenticated.")
+st.sidebar.caption("⏱️ Session timeout: 30m idle")
 
-# ==================== NAVIGATION BAR ====================
+# ==================== STRICT ROLE NAVIGATION ====================
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 nav_cols = st.columns(5)
@@ -359,14 +419,14 @@ def highlight_status(val):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
     return ''
 
-# ==================== 1. OT FORM PORTAL ====================
+# ==================== 1. OT FORM PORTAL (WITH DAILY 3H & WEEKLY 12H CAPS) ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
         <div class="fluent-card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
-                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Submit and manage overtime requests securely.</p>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Policy Limits: <b>Max 3 hrs/day</b> | <b>Max 12 hrs/week</b>. Standard weekday/weekend rate applies.</p>
                 </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
@@ -419,24 +479,60 @@ if st.session_state.current_view == "portal":
         if o_end_min < o_start_min: o_end_min += 1440
         if s_end_min < s_start_min: s_end_min += 1440
         
+        ot_hours = (o_end_min - o_start_min) / 60.0
+        req_date_str = req_date.strftime("%Y-%m-%d")
+        
+        # Validation 1: Shift Overlap
         if max(s_start_min, o_start_min) < min(s_end_min, o_end_min):
             st.error("❌ Overtime hours cannot overlap regular shift timings.")
+        # Validation 2: Positive Duration
+        elif ot_hours <= 0:
+            st.error("❌ OT End time must be after Start time.")
+        # Validation 3: Daily 3-Hour Cap
+        elif ot_hours > 3.0:
+            st.error(f"❌ Policy Violation: Overtime cannot exceed 3.0 hours in a single day (Requested: {ot_hours:.1f} hrs).")
         else:
-            ot_hours = (o_end_min - o_start_min) / 60.0
-            if ot_hours <= 0:
-                st.error("❌ OT End time must be after Start time.")
+            # Check Cumulative Daily & Weekly Caps in Database
+            conn = get_connection()
+            # Daily check
+            daily_check = pd.read_sql("SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date = %s AND status != 'Rejected'", conn, params=(target_name, req_date_str))
+            existing_daily = daily_check['ot_hours'].sum()
+            
+            # Weekly check (Monday to Sunday)
+            week_start = req_date - timedelta(days=req_date.weekday())
+            week_end = week_start + timedelta(days=6)
+            weekly_check = pd.read_sql(
+                "SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date >= %s AND date <= %s AND status != 'Rejected'", 
+                conn, 
+                params=(target_name, week_start.strftime("%Y-%m-%d"), week_end.strftime("%Y-%m-%d"))
+            )
+            existing_weekly = weekly_check['ot_hours'].sum()
+            
+            if existing_daily + ot_hours > 3.0:
+                conn.close()
+                st.error(f"❌ Daily Limit Exceeded: You already have {existing_daily:.1f} hrs logged on {req_date_str}. Adding {ot_hours:.1f} hrs exceeds the 3.0h daily limit.")
+            elif existing_weekly + ot_hours > 12.0:
+                conn.close()
+                st.error(f"❌ Weekly Limit Exceeded: You have {existing_weekly:.1f} hrs logged this week ({week_start} to {week_end}). Adding {ot_hours:.1f} hrs exceeds the 12.0h weekly policy cap.")
             else:
                 std_rate = RATES.get(task_type, 12)
                 expected_out = ot_hours * std_rate
                 
-                conn = get_connection()
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO ot_logs (date, employee_name, emp_id, shift_start, shift_end, ot_start, ot_end, ot_hours, task_type, status, tl_name, actual_output, standard_rate, expected_output, productivity, verified_hours, amount, approved_by, approved_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, 0, 0, 0, '', '')
-                """, (req_date.strftime("%Y-%m-%d"), target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
+                """, (req_date_str, target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
+                
+                # Fetch TL email to send alert
+                cursor.execute("SELECT email FROM users WHERE name = %s", (target_tl,))
+                tl_email_res = cursor.fetchone()
                 conn.commit()
                 conn.close()
+                
+                if tl_email_res:
+                    send_notification(tl_email_res[0], f"📥 New OT Request: {target_name} logged {ot_hours}h for {req_date_str} ({task_type}).")
+                
                 st.success(f"✅ OT successfully requested for {target_name} ({ot_hours} hrs)!")
 
 # ==================== 2. MY HISTORY ====================
@@ -487,12 +583,8 @@ elif st.session_state.current_view == "history":
             
             styled_history = filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
             st.dataframe(styled_history, use_container_width=True)
-            
-            if not filtered_history.empty:
-                pdf_data = generate_pdf_report(filtered_history, f"OT History - {user['name']}")
-                st.download_button("Download PDF Statement 📄", data=pdf_data, file_name="my_ot_history.pdf", mime="application/pdf")
 
-# ==================== 3. APPROVAL DASHBOARD ====================
+# ==================== 3. APPROVAL DASHBOARD (WITH BATCH APPROVAL) ====================
 elif st.session_state.current_view == "dashboard":
     if user['role'] not in ["TL", "Admin"]:
         st.error("⛔ Access Denied. Dashboard is restricted to Team Leaders and Admins.")
@@ -502,7 +594,7 @@ elif st.session_state.current_view == "dashboard":
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📊 TL Approval & Analytics Dashboard</h2>
-                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Approve team overtime requests and track operational costs.</p>
+                        <p style="color: #605E5C; font-size: 14px; margin: 0;">Approve requests individually or use <b>Batch Approval</b> to clear requests in bulk.</p>
                     </div>
                     <div class="brand-logo">EXCIT<span>EL</span></div>
                 </div>
@@ -530,11 +622,9 @@ elif st.session_state.current_view == "dashboard":
             m3.metric("Pending Approvals", pending_cnt)
             m4.metric("Approved Requests", approved_cnt)
             
-            st.markdown("### 📈 Visual Analytics & Cost Trends")
-            ch1, ch2, ch3 = st.columns(3)
-            
+            st.markdown("### 📈 Cost & Hours Analytics")
+            ch1, ch2 = st.columns(2)
             with ch1:
-                st.markdown("#### Status Breakdown")
                 status_counts = df['status'].value_counts().reset_index()
                 status_counts.columns = ['Status', 'Count']
                 chart_status = alt.Chart(status_counts).mark_arc(innerRadius=40).encode(
@@ -542,18 +632,7 @@ elif st.session_state.current_view == "dashboard":
                     color=alt.Color(field="Status", type="nominal", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#10B981', '#EF4444']))
                 ).properties(height=200)
                 st.altair_chart(chart_status, use_container_width=True)
-                
             with ch2:
-                st.markdown("#### Task-wise OT Hours")
-                task_counts = df.groupby('task_type')['ot_hours'].sum().reset_index()
-                chart_task = alt.Chart(task_counts).mark_bar(color='#1E3A8A', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-                    x=alt.X('task_type', sort='-y', title='Task Type'),
-                    y=alt.Y('ot_hours', title='Total Hours')
-                ).properties(height=200)
-                st.altair_chart(chart_task, use_container_width=True)
-
-            with ch3:
-                st.markdown("#### Daily Cost Trend")
                 trend_df = df[df['status'] == 'Approved'].groupby('date')['amount'].sum().reset_index()
                 if not trend_df.empty:
                     chart_trend = alt.Chart(trend_df).mark_line(point=True, color='#FF6B00').encode(
@@ -562,24 +641,62 @@ elif st.session_state.current_view == "dashboard":
                     ).properties(height=200)
                     st.altair_chart(chart_trend, use_container_width=True)
                 else:
-                    st.info("No approved cost trends yet.")
+                    st.info("No approved payout trends to graph yet.")
 
-            st.markdown("### 📝 Pending Requests Review")
+            # Batch Approvals Section
+            st.markdown("### ⚡ Batch Approval Action")
             pending_df = df[df['status'] == 'Pending']
+            
             if pending_df.empty:
                 st.success("🎉 All caught up! No pending requests.")
             else:
+                with st.expander("⚡ Multi-Select Batch Approval", expanded=True):
+                    st.write("Select multiple pending requests to approve them simultaneously with 100% target verified:")
+                    
+                    selected_ids = []
+                    for idx, r in pending_df.iterrows():
+                        col_chk, col_det = st.columns([0.5, 9.5])
+                        with col_chk:
+                            chk = st.checkbox("", key=f"batch_chk_{r['id']}")
+                            if chk:
+                                selected_ids.append(r)
+                        with col_det:
+                            st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Expected: {r['expected_output']}")
+                    
+                    if selected_ids:
+                        col_b_act1, col_b_act2 = st.columns(2)
+                        if col_b_act1.button(f"Approve Selected ({len(selected_ids)}) ✅", type="primary"):
+                            conn = get_connection()
+                            cursor = conn.cursor()
+                            for req in selected_ids:
+                                v_hrs = req['ot_hours']
+                                amt = v_hrs * 120
+                                cursor.execute("""
+                                    UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = 1.0, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
+                                    WHERE id = %s
+                                """, (req['expected_output'], v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), req['id']))
+                                
+                                # Send notification to employee
+                                cursor.execute("SELECT email FROM users WHERE name = %s", (req['employee_name'],))
+                                emp_mail = cursor.fetchone()
+                                if emp_mail:
+                                    send_notification(emp_mail[0], f"🎉 OT Approved: Your {req['ot_hours']}h request on {req['date']} was approved by {user['name']}.")
+                            conn.commit()
+                            conn.close()
+                            st.success(f"Batch approved {len(selected_ids)} requests!")
+                            st.rerun()
+
+                st.markdown("### 📝 Individual Request Review")
                 for idx, row in pending_df.iterrows():
-                    with st.expander(f"📌 {row['employee_name']} | Date: {row['date']} | Hours: {row['ot_hours']}h ({row['task_type']})"):
+                    with st.expander(f"👤 {row['employee_name']} | Date: {row['date']} | Hours: {row['ot_hours']}h ({row['task_type']})"):
                         col_a, col_b = st.columns(2)
                         with col_a:
                             st.write(f"**TL:** {row['tl_name']}")
                             st.write(f"**Shift:** {row['shift_start']} - {row['shift_end']}")
                             st.write(f"**OT Timing:** {row['ot_start']} - {row['ot_end']}")
-                            st.write(f"**Expected Output (Target):** {row['expected_output']}")
+                            st.write(f"**Expected Output:** {row['expected_output']}")
                         with col_b:
-                            actual_out = st.number_input(f"Enter Actual Output for row {row['id']}", min_value=0.0, value=0.0, key=f"out_{row['id']}")
-                            
+                            actual_out = st.number_input(f"Enter Actual Output for row {row['id']}", min_value=0.0, value=float(row['expected_output']), key=f"out_{row['id']}")
                             col_btn1, col_btn2 = st.columns(2)
                             if col_btn1.button("Approve ✅", key=f"app_{row['id']}"):
                                 expected = row['expected_output']
@@ -593,8 +710,13 @@ elif st.session_state.current_view == "dashboard":
                                     UPDATE ot_logs SET status = 'Approved', actual_output = %s, productivity = %s, verified_hours = %s, amount = %s, approved_by = %s, approved_at = %s
                                     WHERE id = %s
                                 """, (actual_out, prod, v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                                cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
+                                emp_mail = cursor.fetchone()
                                 conn.commit()
                                 conn.close()
+                                
+                                if emp_mail:
+                                    send_notification(emp_mail[0], f"🎉 OT Approved: Your {row['ot_hours']}h request on {row['date']} has been approved.")
                                 st.success("Approved successfully!")
                                 st.rerun()
                                 
@@ -602,12 +724,17 @@ elif st.session_state.current_view == "dashboard":
                                 conn = get_connection()
                                 cursor = conn.cursor()
                                 cursor.execute("UPDATE ot_logs SET status = 'Rejected', approved_by = %s, approved_at = %s WHERE id = %s", (user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), row['id']))
+                                cursor.execute("SELECT email FROM users WHERE name = %s", (row['employee_name'],))
+                                emp_mail = cursor.fetchone()
                                 conn.commit()
                                 conn.close()
+                                
+                                if emp_mail:
+                                    send_notification(emp_mail[0], f"⚠️ OT Rejected: Your {row['ot_hours']}h request on {row['date']} was rejected.")
                                 st.warning("Request rejected.")
                                 st.rerun()
 
-            st.markdown("### 📋 All Requests Log")
+            st.markdown("### 📋 All Request Logs")
             styled_all_df = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
             st.dataframe(styled_all_df, use_container_width=True)
 
@@ -663,23 +790,13 @@ elif st.session_state.current_view == "reports":
                 st.metric("Total Monthly Payout", f"₹{summary_df['total_amount'].sum():.0f}")
                 st.dataframe(summary_df, use_container_width=True)
                 
-                col_d1, col_d2 = st.columns(2)
-                with col_d1:
-                    csv = summary_df.to_csv(index=False).encode('utf-8')
-                    st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
-                with col_d2:
-                    pdf_data = generate_pdf_report(filtered_df, f"Monthly Summary Report - {report_month}/{report_year}")
-                    st.download_button("Download PDF 📄", data=pdf_data, file_name="monthly_summary.pdf", mime="application/pdf")
+                csv = summary_df.to_csv(index=False).encode('utf-8')
+                st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
             else:
                 styled_report_df = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
                 st.dataframe(styled_report_df, use_container_width=True)
-                col_d1, col_d2 = st.columns(2)
-                with col_d1:
-                    csv = filtered_df.to_csv(index=False).encode('utf-8')
-                    st.download_button("Download CSV 📥", csv, "detailed_ot_log.csv", "text/csv")
-                with col_d2:
-                    pdf_data = generate_pdf_report(filtered_df, f"Detailed OT Log Report - {report_month}/{report_year}")
-                    st.download_button("Download PDF 📄", data=pdf_data, file_name="detailed_ot_log.pdf", mime="application/pdf")
+                csv = filtered_df.to_csv(index=False).encode('utf-8')
+                st.download_button("Download CSV 📥", csv, "detailed_ot_log.csv", "text/csv")
         else:
             st.info("No records found.")
 
@@ -702,10 +819,8 @@ elif st.session_state.current_view == "admin":
         
         tab_adm1, tab_adm2 = st.tabs(["➕ Add New User / Bulk Upload", "📋 Active Users Directory & Management"])
         
-        # --- TAB 1: ADD NEW USER & BULK UPLOAD ---
         with tab_adm1:
             col_u1, col_u2 = st.columns(2)
-            
             with col_u1:
                 with st.form("add_user_form"):
                     st.markdown("### 👤 Create Single User")
@@ -741,27 +856,17 @@ elif st.session_state.current_view == "admin":
                 st.markdown("### 📁 Bulk Onboard via Excel / CSV")
                 st.markdown("""
                     Upload an Excel (`.xlsx`) or CSV file containing user records. 
-                    \n**Required Headers:** `email`, `name`, `role`, `emp_id`, `tl_name`, `tl_id`, `password` 
-                    *(Note: If password is left blank, it defaults to `Password123`)*
+                    \n**Required Headers:** `email`, `name`, `role`, `emp_id`, `tl_name`, `tl_id`, `password`
                 """)
-                
                 uploaded_file = st.file_uploader("Upload Employee Data File", type=["xlsx", "csv"])
-                
                 if uploaded_file is not None:
                     try:
-                        if uploaded_file.name.endswith('.csv'):
-                            bulk_df = pd.read_csv(uploaded_file)
-                        else:
-                            bulk_df = pd.read_excel(uploaded_file)
-                        
-                        st.markdown("#### Preview:")
+                        bulk_df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
                         st.dataframe(bulk_df.head(3), use_container_width=True)
-                        
                         if st.button("Process Bulk Import 🚀", type="primary"):
                             conn = get_connection()
                             cursor = conn.cursor()
                             success_count = 0
-                            
                             for _, row in bulk_df.iterrows():
                                 try:
                                     email = str(row['email']).strip().lower()
@@ -774,7 +879,6 @@ elif st.session_state.current_view == "admin":
                                     if raw_pass == 'nan' or not raw_pass:
                                         raw_pass = 'Password123'
                                     p_hash = hash_password(raw_pass)
-                                    
                                     cursor.execute("""
                                         INSERT INTO users (email, name, role, emp_id, tl_name, tl_id, password_hash) 
                                         VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -786,7 +890,6 @@ elif st.session_state.current_view == "admin":
                                     success_count += 1
                                 except Exception:
                                     continue
-                                    
                             conn.commit()
                             conn.close()
                             st.success(f"Successfully imported {success_count} records!")
@@ -794,7 +897,6 @@ elif st.session_state.current_view == "admin":
                     except Exception as file_err:
                         st.error(f"Error reading file: {file_err}")
 
-        # --- TAB 2: ACTIVE USERS DIRECTORY DATA GRID ---
         with tab_adm2:
             st.markdown("### 📋 Active System Users Directory")
             conn = get_connection()
@@ -804,7 +906,6 @@ elif st.session_state.current_view == "admin":
             if users_df.empty:
                 st.info("No users found.")
             else:
-                # Custom Table Headers
                 st.markdown("<div class='table-header'>", unsafe_allow_html=True)
                 header_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.2])
                 header_cols[0].markdown("**Name**")
@@ -816,10 +917,8 @@ elif st.session_state.current_view == "admin":
                 header_cols[6].markdown("**Actions**")
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Table Rows
                 for idx, row in users_df.iterrows():
                     row_cols = st.columns([2, 2.5, 1, 1.5, 1.5, 1, 1.2])
-                    
                     row_cols[0].write(row['name'])
                     row_cols[1].write(row['email'])
                     row_cols[2].write(row['role'])
@@ -827,13 +926,9 @@ elif st.session_state.current_view == "admin":
                     row_cols[4].write(row['tl_name'])
                     row_cols[5].write(row['tl_id'])
                     
-                    # Action Buttons inside a nested column for alignment
                     act_col1, act_col2 = row_cols[6].columns(2)
-                    
                     if act_col1.button("✏️", key=f"edit_btn_{row['email']}", help="Edit User Details"):
                         edit_user_dialog(row.to_dict())
-                        
                     if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
                         delete_user_dialog(row['email'], user['email'])
-                        
                     st.markdown("<hr style='margin: 0px; padding: 0px; border-top: 1px solid #F0F0F0;'>", unsafe_allow_html=True)
