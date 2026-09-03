@@ -432,6 +432,13 @@ def highlight_status(val):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
     return ''
 
+def apply_status_style(styler):
+    """Safely applies status coloring across pandas versions."""
+    if hasattr(styler, 'map'):
+        return styler.map(highlight_status, subset=['status'])
+    else:
+        return styler.applymap(highlight_status, subset=['status'])
+
 # ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
@@ -587,7 +594,7 @@ elif st.session_state.current_view == "history":
             c2.metric("Approved Payable Hours", f"{app_hrs:.1f} hrs")
             c3.metric("Filtered Payout Amount", f"₹{total_amt:.0f}")
             
-            styled_history = filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+            styled_history = apply_status_style(filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style)
             st.dataframe(styled_history, use_container_width=True)
 
 # ==================== 3. APPROVAL DASHBOARD ====================
@@ -737,7 +744,7 @@ elif st.session_state.current_view == "dashboard":
                                 st.rerun()
 
             st.markdown("### 📋 All Request Logs")
-            styled_all_df = df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+            styled_all_df = apply_status_style(df[['date', 'employee_name', 'tl_name', 'task_type', 'ot_hours', 'actual_output', 'status', 'amount']].style)
             st.dataframe(styled_all_df, use_container_width=True)
 
 # ==================== 4. REPORTS ENGINE ====================
@@ -795,7 +802,7 @@ elif st.session_state.current_view == "reports":
                 csv = summary_df.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "monthly_summary.csv", "text/csv")
             else:
-                styled_report_df = filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
+                styled_report_df = apply_status_style(filtered_df[['date', 'employee_name', 'emp_id', 'tl_name', 'task_type', 'ot_hours', 'status', 'amount']].style)
                 st.dataframe(styled_report_df, use_container_width=True)
                 csv = filtered_df.to_csv(index=False).encode('utf-8')
                 st.download_button("Download CSV 📥", csv, "detailed_ot_log.csv", "text/csv")
