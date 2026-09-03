@@ -205,7 +205,7 @@ st.markdown("""
 
         /* Fixed Standard Content Width */
         .block-container {
-            max-width: 1040px !important;
+            max-width: 960px !important;
             width: 100% !important;
             margin: 0 auto !important;
             padding-top: 80px !important;
@@ -329,7 +329,7 @@ st.markdown("""
             margin-bottom: 2px !important;
         }
 
-        /* White Card Container */
+        /* Clean Unified White Card Container */
         .workspace-card-box {
             background: #FFFFFF;
             border-radius: 20px;
@@ -340,7 +340,7 @@ st.markdown("""
             margin-bottom: 25px;
         }
 
-        /* Bulk Upload Specific Styling matching screenshot image_2cd40b.png */
+        /* Bulk Upload Specific Styling matching screenshot */
         .bulk-card-header {
             font-size: 22px;
             font-weight: 800;
@@ -1281,7 +1281,7 @@ elif st.session_state.current_view == "reports":
         st.info("No records match the requested period.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ==================== 5. ADMIN PANEL (RESTORED SIDE-BY-SIDE LAYOUT matching image_2cd40b.png) ====================
+# ==================== 5. ADMIN PANEL (RESTORED TWO-COLUMN LAYOUT matching image_2cd40b.png) ====================
 elif st.session_state.current_view == "admin":
     st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
     
@@ -1291,7 +1291,7 @@ elif st.session_state.current_view == "admin":
         st.markdown("""
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                 <div>
-                    <div style="font-size:20px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
+                    <div style="font-size:19px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
                     <div style="font-size:12.5px; color:#605E5C; margin-top:2px;">Single creation, bulk imports, directory edits, and security audit trail</div>
                 </div>
                 <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
