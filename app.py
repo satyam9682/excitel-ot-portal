@@ -203,7 +203,7 @@ st.markdown("""
             display: none !important;
         }
 
-        /* Fixed Standard Content Width */
+        /* Fixed Standard Content Width matching employee.html max-width */
         .block-container {
             max-width: 1040px !important;
             width: 100% !important;
@@ -214,7 +214,7 @@ st.markdown("""
             padding-right: 25px !important;
         }
 
-        /* Top White Header Bar matching employee.html .top-header exactly */
+        /* Top White Header Bar matching employee.html .top-header */
         .excitel-topbar {
             position: fixed;
             top: 0;
@@ -281,6 +281,22 @@ st.markdown("""
             flex-wrap: wrap;
             box-shadow: 0 4px 20px rgba(30,58,138,0.15);
         }
+        .nav-btn { 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            font-size: 12px; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 5px; 
+            font-family: 'Poppins', sans-serif; 
+            transition: 0.2s; 
+            text-decoration: none; 
+        }
+        .nav-btn:hover { opacity: 0.9; transform: translateY(-1px); color: white; }
 
         /* Primary Submit Buttons */
         button[kind="primary"] {
@@ -812,7 +828,7 @@ with ut_c3:
         st.session_state.user_name = ""
         st.rerun()
 
-# ==================== EXACT NATIVE NAVIGATION CAPSULE (NO HTML ESCAPING) ====================
+# ==================== FULLY FIXED NATIVE HTML NAVIGATION RENDERING ====================
 nav_tabs_html = ""
 if user['role'] == "Admin":
     nav_tabs_html = """
@@ -1310,7 +1326,7 @@ elif st.session_state.current_view == "reports":
                 csv_bytes = det_view.to_csv(index=False).encode('utf-8')
                 st.download_button("Download Detailed Report CSV", data=csv_bytes, file_name=f"Excitel_Detailed_Report_{rep_month}_{rep_year}.csv", mime="text/csv")
     else:
-        st.info("No records match the requested period.")
+        st.info("No records match the selected period.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== 5. ADMIN PANEL ====================
