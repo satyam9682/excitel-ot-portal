@@ -153,24 +153,26 @@ def send_notification(recipient_email, message):
     finally:
         release_connection(conn)
 
-# ==================== PAGE CONFIG & STYLING ====================
+# ==================== PAGE CONFIG & CSS STYLING ====================
 st.set_page_config(page_title="Excitel OT Portal", page_icon="⚡", layout="wide")
 
-# CSS to reproduce the UI shown in the reference image
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800&display=swap');
         
-        /* App Canvas */
-        .stApp {
+        /* Force Root Canvas Color */
+        html, body, .stApp {
             background-color: #FF6B00 !important;
-            font-family: 'Segoe UI', sans-serif !important;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
         
-        header[data-testid="stHeader"] {
+        header[data-testid="stHeader"], footer, #MainMenu {
             display: none !important;
         }
         
+        /* Remove Default Streamlit Padding to Allow Full-Width Topbar */
         .main .block-container {
             padding: 0 !important;
             max-width: 100% !important;
@@ -180,17 +182,17 @@ st.markdown("""
         .excitel-topbar {
             background: #FFFFFF;
             width: 100%;
-            padding: 12px 36px;
+            padding: 12px 48px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
         }
         .brand-cluster {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 22px;
         }
         .brand-title {
             font-size: 26px;
@@ -209,8 +211,8 @@ st.markdown("""
             background: #FF6B00;
             color: #FFFFFF;
             font-weight: 700;
-            font-size: 13px;
-            padding: 6px 18px;
+            font-size: 12px;
+            padding: 6px 16px;
             border-radius: 20px;
             letter-spacing: 0.5px;
             display: inline-block;
@@ -224,17 +226,17 @@ st.markdown("""
             padding-left: 18px;
         }
         
-        /* Floating Dark Navy Pill Navigation Header */
+        /* Floating Dark Navy Pill Command Navigation Bar */
         .nav-pill-container {
-            background: #233D6B;
-            border-radius: 30px;
+            background: #1F3A60;
+            border-radius: 35px;
             padding: 8px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 0 auto 24px auto;
+            margin: 0 auto 20px auto;
             max-width: 1180px;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
         }
         .nav-user-label {
             color: #FFFFFF;
@@ -246,14 +248,56 @@ st.markdown("""
             padding-left: 10px;
         }
 
-        /* Centered White Work Surface Card */
+        /* Unified White Workspace Card */
         .workspace-card {
             background: #FFFFFF;
-            border-radius: 20px;
-            padding: 30px 40px;
+            border-radius: 18px;
+            padding: 36px 44px;
             max-width: 1180px;
             margin: 0 auto 30px auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.14);
+        }
+
+        /* Clean Unified Login Card */
+        .login-card-container {
+            background: #FFFFFF;
+            border-radius: 18px;
+            padding: 40px 48px;
+            max-width: 480px;
+            margin: 40px auto 0 auto;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+        }
+
+        /* Form Labels on White Background */
+        .login-card-container label, .workspace-card label {
+            color: #201F1E !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+        }
+        
+        /* Input Field Styling */
+        div[data-baseweb="input"] {
+            border-radius: 8px !important;
+            border: 1px solid #D1D5DB !important;
+            background-color: #FFFFFF !important;
+        }
+        div[data-baseweb="input"]:focus-within {
+            border-color: #FF6B00 !important;
+        }
+
+        /* Primary Button */
+        .stButton>button {
+            background: #FF6B00 !important;
+            color: #FFFFFF !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25) !important;
+            width: 100% !important;
+        }
+        .stButton>button:hover {
+            background: #E05D00 !important;
         }
 
         /* 5 Top Summary Metric Cards */
@@ -293,22 +337,10 @@ st.markdown("""
         .kpi-cyan { border-bottom: 4px solid #0EA5E9; color: #1F3A60; }
         .kpi-blue { border-bottom: 4px solid #2563EB; color: #1F3A60; }
 
-        /* Custom Modern Form Inputs */
-        div[data-baseweb="input"] {
-            border-radius: 8px !important;
-        }
-        
-        /* Interactive Table Aesthetics */
-        div[data-testid="stDataFrame"] {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        /* Modal and Dialogs Styling */
-        div[data-testid="stDialog"] div[role="dialog"] {
-            border-radius: 16px;
-            border-top: 6px solid #FF6B00;
+        /* Hide Streamlit Elements inside Forms */
+        div[data-testid="stForm"] {
+            border: none !important;
+            padding: 0 !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -340,58 +372,62 @@ if st.session_state.authenticated:
 
 # ==================== LOGIN GATEWAY ====================
 if not st.session_state.authenticated:
+    # Full-bleed topbar matching reference image
     st.markdown("""
-        <div style="background: #FFFFFF; width: 100%; padding: 14px 36px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
-            <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">✴️ Excitel<div style="font-size: 11px; color: #605E5C; font-weight: 400;">The world is home</div></div>
+        <div class="excitel-topbar">
+            <div class="brand-cluster">
+                <div>
+                    <div class="brand-title">✴️ Excitel</div>
+                    <div class="brand-sub">The world is home</div>
+                </div>
+            </div>
             <div class="topbar-badge">SECURE_AUTH</div>
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
-        st.markdown("""
-            <div style="background: #FFFFFF; border-radius: 16px; padding: 32px 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.18);">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 24px; font-weight: 800; color: #0E2B5C; text-transform: uppercase;">Overtime Tracking Portal</div>
-                    <div style="font-size: 13px; color: #605E5C; margin-top: 4px;">Sign in with your official Excitel credentials</div>
-                </div>
-        """, unsafe_allow_html=True)
+    # Clean centered login form card
+    st.markdown("""
+        <div class="login-card-container">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <h2 style="color: #0E2B5C; font-weight: 800; text-transform: uppercase; margin: 0; font-size: 22px;">OVERTIME TRACKING PORTAL</h2>
+                <div style="color: #605E5C; font-size: 13px; margin-top: 5px;">Sign in with your official Excitel credentials</div>
+            </div>
+    """, unsafe_allow_html=True)
 
-        with st.form("login_form"):
-            login_email = st.text_input("Official Email ID")
-            login_password = st.text_input("Password", type="password")
-            submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
+    with st.form("login_form"):
+        login_email = st.text_input("Official Email ID")
+        login_password = st.text_input("Password", type="password")
+        submit_login = st.form_submit_button("Sign In 🔐", use_container_width=True)
 
-            if submit_login:
-                if not login_email or not login_password:
-                    st.error("Please provide both email and password.")
-                else:
-                    conn = get_connection()
-                    try:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
-                        res = cursor.fetchone()
-                    finally:
-                        release_connection(conn)
+        if submit_login:
+            if not login_email or not login_password:
+                st.error("Please enter both email and password.")
+            else:
+                conn = get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT name, role, password_hash FROM users WHERE email = %s", (login_email.strip().lower(),))
+                    res = cursor.fetchone()
+                finally:
+                    release_connection(conn)
 
-                    if res:
-                        db_name, db_role, db_pass_hash = res
-                        if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
-                            st.session_state.authenticated = True
-                            st.session_state.user_email = login_email.strip().lower()
-                            st.session_state.user_name = db_name
-                            st.session_state.user_role = db_role
-                            st.session_state.last_activity = time.time()
-                            st.session_state.current_view = "portal"
-                            record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
-                            st.success("Authenticated! Loading portal...")
-                            st.rerun()
-                        else:
-                            st.error("❌ Incorrect password.")
+                if res:
+                    db_name, db_role, db_pass_hash = res
+                    if db_pass_hash == hash_password(login_password) or db_pass_hash == hashlib.sha256(login_password.encode()).hexdigest():
+                        st.session_state.authenticated = True
+                        st.session_state.user_email = login_email.strip().lower()
+                        st.session_state.user_name = db_name
+                        st.session_state.user_role = db_role
+                        st.session_state.last_activity = time.time()
+                        st.session_state.current_view = "portal"
+                        record_audit(st.session_state.user_email, "USER_LOGIN", "PORTAL", "Successful authentication")
+                        st.rerun()
                     else:
-                        st.error("❌ Email not registered in the system.")
+                        st.error("❌ Incorrect password.")
+                else:
+                    st.error("❌ Email not registered in the system.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # ==================== FETCH LOGGED-IN USER ====================
@@ -415,12 +451,10 @@ PAGE_BADGE_MAP = {
     "history": "ACTIONED_OT",
     "dashboard": "TL_DASHBOARD",
     "reports": "REPORTS_ENGINE",
-    "admin": "ADMIN_MANAGEMENT",
-    "guidelines": "POLICY_RULES"
+    "admin": "ADMIN_PORTAL"
 }
 current_badge = PAGE_BADGE_MAP.get(st.session_state.current_view, "OT_TRACKER")
 
-# Render top banner with live dynamic ticking clock via embedded JavaScript
 st.markdown(f"""
     <div class="excitel-topbar">
         <div class="brand-cluster">
@@ -513,7 +547,6 @@ def time_to_minutes(t_str):
     h, m = map(int, t_str.split(':'))
     return h * 60 + m
 
-# Helper for conditional productivity & status coloring
 def color_productivity_and_status(val):
     if isinstance(val, str) and '%' in val:
         try:
@@ -536,8 +569,8 @@ def color_productivity_and_status(val):
 if st.session_state.current_view == "portal":
     st.markdown("""
         <div class="workspace-card">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <h2 style="color: #0E2B5C; font-weight: 800; text-transform: uppercase; margin: 0;">⚡ Overtime Claim Portal</h2>
+            <div style="text-align: center; margin-bottom: 28px;">
+                <h2 style="color: #0E2B5C; font-weight: 800; text-transform: uppercase; margin: 0; font-size: 24px;">OVERTIME ENTRY SUBMISSION</h2>
                 <div style="color: #605E5C; font-size: 13px; font-weight: 600; margin-top: 4px;">Fast & Accurate Verification System</div>
             </div>
     """, unsafe_allow_html=True)
@@ -647,7 +680,7 @@ if st.session_state.current_view == "portal":
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================== 2. HISTORY TAB (EXCITEL UI) ====================
+# ==================== 2. HISTORY TAB ====================
 elif st.session_state.current_view == "history":
     st.markdown("<div class='workspace-card'>", unsafe_allow_html=True)
     
@@ -660,14 +693,13 @@ elif st.session_state.current_view == "history":
     if df.empty:
         st.info("No recorded overtime entries found.")
     else:
-        # Calculate Top 5 Metrics
         total_reqs = len(df)
         approved_reqs = len(df[df['status'] == 'Approved'])
         rejected_reqs = len(df[df['status'] == 'Rejected'])
         approved_hours = df[df['status'] == 'Approved']['verified_hours'].sum()
         total_payout = df[df['status'] == 'Approved']['amount'].sum()
         
-        # Render the 5 Metrics Card Row
+        # 5 KPI Cards
         st.markdown(f"""
             <div class="kpi-grid">
                 <div class="kpi-box kpi-navy">
@@ -693,7 +725,6 @@ elif st.session_state.current_view == "history":
             </div>
         """, unsafe_allow_html=True)
         
-        # Format the interactive sortable table
         display_df = df.copy()
         display_df['formatted_date'] = pd.to_datetime(display_df['date']).dt.strftime('%d-%b-%Y')
         display_df['hours_str'] = display_df['ot_hours'].apply(lambda x: f"{x:.0f}h" if x.is_integer() else f"{x:.1f}h")
@@ -705,7 +736,6 @@ elif st.session_state.current_view == "history":
         final_table.columns = ['DATE', 'EMPLOYEE', 'HOURS', 'TASK', 'PROD %', 'STATUS', 'AMOUNT']
         
         styled_df = final_table.style.map(color_productivity_and_status, subset=['PROD %', 'STATUS'])
-        
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
         
     st.markdown("</div>", unsafe_allow_html=True)
@@ -732,7 +762,6 @@ elif st.session_state.current_view == "dashboard":
         approved_hours = df[df['status'] == 'Approved']['verified_hours'].sum()
         total_payout = df[df['status'] == 'Approved']['amount'].sum()
         
-        # 5 Top Metrics for Supervisor
         st.markdown(f"""
             <div class="kpi-grid">
                 <div class="kpi-box kpi-navy">
