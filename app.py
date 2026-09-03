@@ -20,9 +20,9 @@ if not os.path.exists(config_path):
 [theme]
 base="light"
 primaryColor="#FF6B00"
-backgroundColor="#F4F6FB"
+backgroundColor="#F4F7FC"
 secondaryBackgroundColor="#FFFFFF"
-textColor="#0E2B5C"
+textColor="#1E3A8A"
 font="sans serif"
 """)
 
@@ -203,18 +203,18 @@ st.markdown("""
             display: none !important;
         }
 
-        /* Fixed Standard Content Width matching employee.html max-width */
+        /* Fixed Standard Content Width */
         .block-container {
             max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding-top: 75px !important;
+            padding-top: 85px !important;
             padding-bottom: 30px !important;
             padding-left: 25px !important;
             padding-right: 25px !important;
         }
 
-        /* Top White Header Bar matching employee.html .top-header */
+        /* Top White Header Bar matching employee.html .top-header exactly */
         .excitel-topbar {
             position: fixed;
             top: 0;
@@ -282,7 +282,7 @@ st.markdown("""
             box-shadow: 0 4px 20px rgba(30,58,138,0.15);
         }
 
-        /* Primary Submit Buttons matching employee.html .btn-submit */
+        /* Primary Submit Buttons */
         button[kind="primary"] {
             background: #1E3A8A !important;
             color: #FFFFFF !important;
@@ -299,7 +299,7 @@ st.markdown("""
             background: #152A63 !important;
         }
 
-        /* High-Contrast Corporate Inputs matching employee.html input/select */
+        /* High-Contrast Corporate Inputs */
         div[data-baseweb="input"],
         div[data-baseweb="base-input"],
         div[data-testid="stTextInputRootElement"],
@@ -335,7 +335,7 @@ st.markdown("""
             margin-bottom: 8px !important;
         }
 
-        /* Workspace Card matching employee.html .card */
+        /* Unified Workspace Card matching employee.html .card exactly */
         .workspace-card-box {
             background: #FFFFFF;
             border-radius: 24px;
@@ -358,7 +358,7 @@ st.markdown("""
             width: 100%;
         }
 
-        /* Bulk Upload Specific Styling matching Admin.html / Admin Panel */
+        /* Bulk Upload Specific Styling */
         .bulk-card-header {
             font-size: 20px;
             font-weight: 700;
@@ -384,7 +384,7 @@ st.markdown("""
             font-size: 12px !important;
         }
 
-        /* Proxy Section matching employee.html .proxy-box */
+        /* Proxy Section */
         .proxy-container {
             border: 2px dashed #3B82F6;
             border-radius: 16px;
@@ -393,7 +393,7 @@ st.markdown("""
             margin-bottom: 25px;
         }
 
-        /* KPI Cards matching History.html & Dashboard.html .stat */
+        /* KPI Cards */
         .kpi-grid {
             display: flex;
             gap: 18px;
@@ -778,9 +778,9 @@ st.markdown(f"""
             <div class="vertical-divider"></div>
             <div class="user-tag"><i class="fas fa-user"></i> Agent: {user['name']}</div>
         </div>
-        <div class="header-right">
+        <div class="header-right" style="text-align: right;">
             <div class="topbar-badge">{current_badge}</div>
-            <div class="datetime-display" id="live-clock">Loading...</div>
+            <div class="datetime-display" id="live-clock" style="color: #1E3A8A; font-weight: 700; font-size: 12px; margin-top: 4px;">Loading...</div>
         </div>
     </div>
     <script>
@@ -812,7 +812,7 @@ with ut_c3:
         st.session_state.user_name = ""
         st.rerun()
 
-# ==================== EXACT NAVIGATION CAPSULE ====================
+# ==================== EXACT NATIVE NAVIGATION CAPSULE (NO HTML ESCAPING) ====================
 nav_tabs_html = ""
 if user['role'] == "Admin":
     nav_tabs_html = """
@@ -1333,7 +1333,7 @@ elif st.session_state.current_view == "admin":
             col_u1, col_u2 = st.columns(2)
             with col_u1:
                 with st.form("add_single_user_form"):
-                    st.markdown("### 👤 Create Single User")
+                    st.markdown("<h3>👤 Create Single User</h3>", unsafe_allow_html=True)
                     u_name = st.text_input("Full Name", placeholder="e.g. John Doe")
                     u_email = st.text_input("Official Email ID (Login ID)", placeholder="e.g. testuser@dl.excitel.in")
                     u_pass = st.text_input("Password", type="password", placeholder="Default password")
@@ -1414,7 +1414,7 @@ elif st.session_state.current_view == "admin":
                         st.error(f"Error reading file: {file_err}")
 
         with tab_adm2:
-            st.markdown("### 📋 Active System Users Directory")
+            st.markdown("<h3>📋 Active System Users Directory</h3>", unsafe_allow_html=True)
             conn = get_connection()
             try:
                 users_df = pd.read_sql("SELECT email, name, role, emp_id, tl_name, tl_id FROM users ORDER BY name ASC", conn)
@@ -1456,7 +1456,7 @@ elif st.session_state.current_view == "admin":
                     st.markdown("<hr style='border:none; border-top: 1px solid #E2E8F0; margin: 6px 0;'>", unsafe_allow_html=True)
 
         with tab_adm3:
-            st.markdown("### 🔍 Security Audit Trail")
+            st.markdown("<h3>🔍 Security Audit Trail</h3>", unsafe_allow_html=True)
             conn = get_connection()
             try:
                 audit_df = pd.read_sql("SELECT timestamp, performer, action, target, details FROM audit_logs ORDER BY id DESC LIMIT 50", conn)
