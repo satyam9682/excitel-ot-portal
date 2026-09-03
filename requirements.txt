@@ -3,3 +3,4 @@ pandas
 fpdf2
 altair
 psycopg2-binary
+xlsxwriter
