@@ -205,18 +205,18 @@ st.markdown("""
             display: none !important;
         }
 
-        /* Enforce Standard CRM Container Width */
+        /* Fixed Standard Width Container */
         .block-container {
-            max-width: 1180px !important;
+            max-width: 1040px !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding-top: 88px !important;
-            padding-bottom: 30px !important;
-            padding-left: 20px !important;
-            padding-right: 20px !important;
+            padding-top: 76px !important;
+            padding-bottom: 25px !important;
+            padding-left: 15px !important;
+            padding-right: 15px !important;
         }
 
-        /* Fixed Top Header Bar */
+        /* Full Width Edge-to-Edge Top White Bar */
         .excitel-topbar {
             position: fixed;
             top: 0;
@@ -225,20 +225,20 @@ st.markdown("""
             width: 100vw;
             z-index: 9999;
             background: #FFFFFF;
-            padding: 12px 48px;
+            padding: 10px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 5px solid #FF6B00;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            border-bottom: 4px solid #FF6B00;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         .brand-cluster {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
         }
         .brand-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 800;
             color: #0E2B5C;
             letter-spacing: -0.5px;
@@ -255,73 +255,98 @@ st.markdown("""
             color: #FFFFFF;
             font-weight: 800;
             font-size: 12px;
-            padding: 5px 16px;
+            padding: 4px 14px;
             border-radius: 20px;
             letter-spacing: 0.5px;
             display: inline-block;
             text-align: center;
         }
         .user-tag {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: #0E2B5C;
             border-left: 2px solid #E1DFDD;
-            padding-left: 18px;
+            padding-left: 14px;
         }
 
-        /* Unified Dark Navy Pill Navigation Bar */
-        div[data-testid="stVerticalBlock"]:has(> div > div > .nav-bar-marker) {
-            background: #1F3A60 !important;
-            border-radius: 40px !important;
-            padding: 8px 18px !important;
-            margin-bottom: 24px !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+        /* ==================== EXACT REPLICA OF THE NAV PILL CAPSULE ==================== */
+        div[data-testid="stVerticalBlock"]:has(> div > div > .navbar-anchor) {
+            background: #1C377B !important;
+            border-radius: 30px !important;
+            padding: 6px 14px !important;
+            margin-bottom: 22px !important;
+            box-shadow: 0 3px 12px rgba(28, 55, 123, 0.22) !important;
         }
-        div[data-testid="stVerticalBlock"]:has(> div > div > .nav-bar-marker) div[data-testid="stHorizontalBlock"] {
+        div[data-testid="stVerticalBlock"]:has(> div > div > .navbar-anchor) div[data-testid="stHorizontalBlock"] {
             align-items: center !important;
         }
-        div[data-testid="stVerticalBlock"]:has(> div > div > .nav-bar-marker) .stButton > button {
-            border-radius: 20px !important;
-            height: 36px !important;
-            padding: 4px 12px !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        .nav-user-text {
+        .nav-user-label-styled {
             color: #FFFFFF !important;
             font-weight: 700 !important;
             font-size: 14px !important;
-            padding-left: 8px !important;
             display: flex !important;
             align-items: center !important;
-            height: 100% !important;
+            gap: 6px !important;
+            padding-left: 6px !important;
+            white-space: nowrap !important;
         }
 
-        /* Unified White Workspace Card */
-        div[data-testid="stVerticalBlock"]:has(> div > div > .page-card-marker) {
+        /* Individual Tab Buttons in Capsule */
+        button[key^="tab_"] {
+            border-radius: 18px !important;
+            height: 34px !important;
+            padding: 0 14px !important;
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            border: none !important;
+            color: #FFFFFF !important;
+            box-shadow: none !important;
+            transition: all 0.15s ease !important;
+        }
+        button[key="tab_form"] { background-color: #FF6B00 !important; }
+        button[key="tab_form"]:hover { background-color: #E05D00 !important; }
+
+        button[key="tab_history"] { background-color: #2B71F2 !important; }
+        button[key="tab_history"]:hover { background-color: #1A5CD6 !important; }
+
+        button[key="tab_dashboard"] { background-color: #00B67A !important; }
+        button[key="tab_dashboard"]:hover { background-color: #009B67 !important; }
+
+        button[key="tab_reports"] { background-color: #8B5CF6 !important; }
+        button[key="tab_reports"]:hover { background-color: #7642ED !important; }
+
+        button[key="tab_admin"] { background-color: #EF4444 !important; }
+        button[key="tab_admin"]:hover { background-color: #DC2626 !important; }
+
+        /* Compact Header Utility Buttons */
+        .utility-btn button {
+            background: transparent !important;
+            color: #0E2B5C !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 16px !important;
+            padding: 2px 10px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            height: 28px !important;
+            box-shadow: none !important;
+        }
+        .utility-btn button:hover {
+            border-color: #FF6B00 !important;
+            color: #FF6B00 !important;
+        }
+
+        /* ==================== EXACT REPLICA OF THE WHITE WORKSPACE CARD ==================== */
+        div[data-testid="stVerticalBlock"]:has(> div > div > .card-anchor) {
             background: #FFFFFF !important;
             border-radius: 20px !important;
-            border: 1px solid #E5E7EB !important;
-            border-top: 5px solid #FF6B00 !important;
-            padding: 34px 44px !important;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06) !important;
-            margin-bottom: 30px !important;
+            border: 1px solid #E5E9F0 !important;
+            border-top: 6px solid #FF6B00 !important;
+            padding: 30px 42px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04) !important;
+            margin-bottom: 24px !important;
         }
 
-        /* Fixed-Width Enterprise Login Form */
-        div[data-testid="stForm"] {
-            background: #FFFFFF !important;
-            border: 1px solid #E2E8F0 !important;
-            border-top: 5px solid #FF6B00 !important;
-            border-radius: 20px !important;
-            padding: 38px 42px !important;
-            box-shadow: 0 12px 35px rgba(0,0,0,0.07) !important;
-            margin: 0 auto !important;
-        }
-
-        /* High-Contrast Corporate Form Fields */
+        /* High-Contrast Corporate Form Fields matching image_22762b.png */
         div[data-baseweb="input"],
         div[data-baseweb="base-input"],
         div[data-testid="stTextInputRootElement"],
@@ -332,14 +357,14 @@ st.markdown("""
         div[data-testid="stTimeInput"] > div > div,
         div[data-testid="stNumberInput"] > div > div {
             border: 1.5px solid #CBD5E1 !important;
-            border-radius: 8px !important;
-            background-color: #F8FAFC !important;
-            transition: all 0.2s ease-in-out !important;
+            border-radius: 10px !important;
+            background-color: #F8FAFD !important;
+            transition: all 0.15s ease-in-out !important;
         }
 
         input {
             color: #0E2B5C !important;
-            font-size: 14px !important;
+            font-size: 13.5px !important;
             font-weight: 500 !important;
         }
         input::placeholder {
@@ -356,98 +381,98 @@ st.markdown("""
         div[data-testid="stDateInput"] > div > div:focus-within,
         div[data-testid="stTimeInput"] > div > div:focus-within,
         div[data-testid="stNumberInput"] > div > div:focus-within {
-            border-color: #FF6B00 !important;
+            border-color: #1C377B !important;
             background-color: #FFFFFF !important;
-            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18) !important;
+            box-shadow: 0 0 0 3px rgba(28, 55, 123, 0.12) !important;
         }
 
         div[data-testid="stWidgetLabel"] label p {
             color: #0E2B5C !important;
             font-weight: 700 !important;
-            font-size: 12px !important;
-            letter-spacing: 0.4px !important;
+            font-size: 11.5px !important;
+            letter-spacing: 0.3px !important;
             text-transform: uppercase !important;
+            margin-bottom: 2px !important;
         }
 
-        div[data-testid="stFormSubmitButton"] > button,
-        .stButton > button {
-            background: #FF6B00 !important;
+        /* Solid Navy Submit Button matching image_22762b.png */
+        .navy-submit-btn > button {
+            background: #1C377B !important;
             color: #FFFFFF !important;
             border: none !important;
-            border-radius: 8px !important;
+            border-radius: 10px !important;
             font-size: 14px !important;
             font-weight: 700 !important;
-            padding: 10px 20px !important;
-            box-shadow: 0 4px 14px rgba(255, 107, 0, 0.28) !important;
-            transition: background 0.2s ease, transform 0.1s ease !important;
+            padding: 12px 20px !important;
+            box-shadow: 0 4px 12px rgba(28, 55, 123, 0.25) !important;
             width: 100% !important;
+            height: 44px !important;
+        }
+        .navy-submit-btn > button:hover {
+            background: #14285A !important;
         }
 
-        div[data-testid="stFormSubmitButton"] > button:hover,
-        .stButton > button:hover {
-            background: #E05D00 !important;
-            box-shadow: 0 6px 18px rgba(224, 93, 0, 0.35) !important;
+        /* Proxy Dashed Outline Box */
+        .proxy-container {
+            border: 1.5px dashed #2B71F2;
+            border-radius: 12px;
+            padding: 12px 18px;
+            background: #F8FAFD;
+            margin-bottom: 20px;
         }
 
+        /* 5 Top Summary Metric Cards */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            margin-bottom: 25px;
+            gap: 14px;
+            margin-bottom: 22px;
         }
         .kpi-box {
             background: #FFFFFF;
-            border-radius: 14px;
-            border: 1px solid #E5E7EB;
-            padding: 16px 8px;
+            border-radius: 12px;
+            border: 1px solid #E5E9F0;
+            padding: 14px 6px;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
         }
         .kpi-val {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             line-height: 1.1;
         }
         .kpi-title {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
-            letter-spacing: 0.6px;
-            margin-top: 6px;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
             text-transform: uppercase;
         }
-        .kpi-navy { border-bottom: 4px solid #1F3A60; color: #1F3A60; }
-        .kpi-green { border-bottom: 4px solid #10B981; color: #1F3A60; }
-        .kpi-red { border-bottom: 4px solid #EF4444; color: #1F3A60; }
-        .kpi-cyan { border-bottom: 4px solid #0EA5E9; color: #1F3A60; }
-        .kpi-blue { border-bottom: 4px solid #2563EB; color: #1F3A60; }
+        .kpi-navy { border-bottom: 4px solid #1C377B; color: #1C377B; }
+        .kpi-green { border-bottom: 4px solid #00B67A; color: #1C377B; }
+        .kpi-red { border-bottom: 4px solid #EF4444; color: #1C377B; }
+        .kpi-cyan { border-bottom: 4px solid #0EA5E9; color: #1C377B; }
+        .kpi-blue { border-bottom: 4px solid #2B71F2; color: #1C377B; }
 
-        .proxy-container {
-            border: 2px dashed #2563EB;
-            border-radius: 12px;
-            padding: 14px 18px;
-            background: #F8FAFF;
-            margin-bottom: 20px;
-        }
-        
         .table-header-custom {
             font-weight: 700;
             color: #0E2B5C;
-            padding-bottom: 8px;
+            padding-bottom: 6px;
             border-bottom: 2px solid #E2E8F0;
-            margin-bottom: 12px;
-            font-size: 13px;
+            margin-bottom: 10px;
+            font-size: 12.5px;
         }
         .policy-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
             border-radius: 12px;
-            padding: 20px 24px;
-            margin-bottom: 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            padding: 18px 22px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -732,7 +757,7 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.15, 1])
+    col1, col2, col3 = st.columns([1, 1.25, 1])
     with col2:
         with st.form("login_form"):
             st.markdown("""
@@ -815,7 +840,7 @@ st.markdown(f"""
             </div>
             <div class="user-tag">👤 User: {user['name']}</div>
         </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
             <div class="topbar-badge">{current_badge}</div>
             <div id="live-clock" style="font-size: 13px; font-weight: 700; color: #0E2B5C; min-width: 175px; text-align: right;"></div>
         </div>
@@ -842,52 +867,48 @@ st.markdown(f"""
     </script>
 """, unsafe_allow_html=True)
 
-# ==================== FLOATING COMMAND NAVBAR ====================
+# ==================== HEADER UTILITY BAR (PASSWORD & LOGOUT) ====================
+# Places Pwd and Logout neatly above the capsule, keeping the capsule pure
+ut_c1, ut_c2, ut_c3 = st.columns([7.2, 1.4, 1.4])
+with ut_c2:
+    st.markdown('<div class="utility-btn">', unsafe_allow_html=True)
+    if st.button("🔑 Password", key="top_pwd_btn", use_container_width=True):
+        authenticated_password_dialog(user)
+    st.markdown('</div>', unsafe_allow_html=True)
+with ut_c3:
+    st.markdown('<div class="utility-btn">', unsafe_allow_html=True)
+    if st.button("🚪 Logout", key="top_out_btn", use_container_width=True):
+        record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
+        st.session_state.authenticated = False
+        st.session_state.user_email = ""
+        st.session_state.user_role = ""
+        st.session_state.user_name = ""
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==================== THE FLOATING NAV PILL CAPSULE ====================
+# Matches image_227249.png exactly: Left = User text, Right = Colored tabs
 with st.container():
-    st.markdown('<div class="nav-bar-marker"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="navbar-anchor"></div>', unsafe_allow_html=True)
     if user['role'] == "Admin":
-        nav_c = st.columns([2.6, 1.1, 1.1, 1.1, 1.1, 1.1, 0.9, 0.8])
-        nav_c[0].markdown(f'<div class="nav-user-text">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
-        if nav_c[1].button("📄 OT Form", key="btn_f"): st.session_state.current_view = "portal"; st.rerun()
-        if nav_c[2].button("🕒 History", key="btn_h"): st.session_state.current_view = "history"; st.rerun()
-        if nav_c[3].button("📊 Dashboard", key="btn_d"): st.session_state.current_view = "dashboard"; st.rerun()
-        if nav_c[4].button("📈 Reports", key="btn_r"): st.session_state.current_view = "reports"; st.rerun()
-        if nav_c[5].button("👥 Admin", key="btn_a"): st.session_state.current_view = "admin"; st.rerun()
-        if nav_c[6].button("🔑 Pwd", key="btn_p"): authenticated_password_dialog(user)
-        if nav_c[7].button("🚪 Exit", key="btn_e"):
-            record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
-            st.session_state.authenticated = False
-            st.session_state.user_email = ""
-            st.session_state.user_role = ""
-            st.session_state.user_name = ""
-            st.rerun()
+        nav_c = st.columns([3.6, 1.25, 1.25, 1.35, 1.25, 1.25])
+        nav_c[0].markdown(f'<div class="nav-user-label-styled">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
+        if nav_c[1].button("📄 OT Form", key="tab_form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
+        if nav_c[2].button("🕒 History", key="tab_history", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
+        if nav_c[3].button("📊 Dashboard", key="tab_dashboard", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
+        if nav_c[4].button("📈 Reports", key="tab_reports", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
+        if nav_c[5].button("👥 Admin", key="tab_admin", use_container_width=True): st.session_state.current_view = "admin"; st.rerun()
     elif user['role'] == "TL":
-        nav_c = st.columns([3.2, 1.3, 1.3, 1.3, 1.0, 0.9])
-        nav_c[0].markdown(f'<div class="nav-user-text">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
-        if nav_c[1].button("📄 OT Form", key="btn_f"): st.session_state.current_view = "portal"; st.rerun()
-        if nav_c[2].button("📊 Dashboard", key="btn_d"): st.session_state.current_view = "dashboard"; st.rerun()
-        if nav_c[3].button("📈 Reports", key="btn_r"): st.session_state.current_view = "reports"; st.rerun()
-        if nav_c[4].button("🔑 Pwd", key="btn_p"): authenticated_password_dialog(user)
-        if nav_c[5].button("🚪 Exit", key="btn_e"):
-            record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
-            st.session_state.authenticated = False
-            st.session_state.user_email = ""
-            st.session_state.user_role = ""
-            st.session_state.user_name = ""
-            st.rerun()
+        nav_c = st.columns([4.8, 1.4, 1.4, 1.4])
+        nav_c[0].markdown(f'<div class="nav-user-label-styled">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
+        if nav_c[1].button("📄 OT Form", key="tab_form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
+        if nav_c[2].button("📊 Dashboard", key="tab_dashboard", use_container_width=True): st.session_state.current_view = "dashboard"; st.rerun()
+        if nav_c[3].button("📈 Reports", key="tab_reports", use_container_width=True): st.session_state.current_view = "reports"; st.rerun()
     else:  # Employee
-        nav_c = st.columns([4.0, 1.4, 1.4, 1.0, 0.9])
-        nav_c[0].markdown(f'<div class="nav-user-text">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
-        if nav_c[1].button("📄 OT Form", key="btn_f"): st.session_state.current_view = "portal"; st.rerun()
-        if nav_c[2].button("🕒 History", key="btn_h"): st.session_state.current_view = "history"; st.rerun()
-        if nav_c[3].button("🔑 Pwd", key="btn_p"): authenticated_password_dialog(user)
-        if nav_c[4].button("🚪 Exit", key="btn_e"):
-            record_audit(user['email'], "USER_LOGOUT", "PORTAL", "Manual sign out")
-            st.session_state.authenticated = False
-            st.session_state.user_email = ""
-            st.session_state.user_role = ""
-            st.session_state.user_name = ""
-            st.rerun()
+        nav_c = st.columns([6.4, 1.8, 1.8])
+        nav_c[0].markdown(f'<div class="nav-user-label-styled">🛡️ {user["name"]} ({user["role"]})</div>', unsafe_allow_html=True)
+        if nav_c[1].button("📄 OT Form", key="tab_form", use_container_width=True): st.session_state.current_view = "portal"; st.rerun()
+        if nav_c[2].button("🕒 History", key="tab_history", use_container_width=True): st.session_state.current_view = "history"; st.rerun()
 
 RATES = {'Calls': 12, 'Backend': 10, 'Tickets': 12, 'Complaints': 8, 'Email': 15}
 
@@ -913,14 +934,14 @@ def color_productivity_and_status(val):
         return 'background-color: #FEF3C7; color: #D97706; font-weight: 800; border-radius: 14px; text-align: center;'
     return ''
 
-# ==================== 1. OT FORM PORTAL ====================
+# ==================== 1. OT FORM PORTAL (MATCHING image_22762b.png) ====================
 if st.session_state.current_view == "portal":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         st.markdown("""
-            <div style="text-align: center; margin-bottom: 26px;">
+            <div style="text-align: center; margin-bottom: 22px;">
                 <div style="font-size: 26px; font-weight: 800; color: #0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
-                <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 4px;">OT Entry Portal</div>
+                <div style="font-size: 16px; font-weight: 700; color: #0E2B5C; margin-top: 3px;">OT Entry Portal</div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -968,7 +989,8 @@ if st.session_state.current_view == "portal":
         task_type = st.selectbox("TASK TYPE", options=['Select Task...', 'Calls', 'Backend', 'Tickets', 'Complaints', 'Email'])
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 Submit OT Request", type="primary", use_container_width=True):
+        st.markdown('<div class="navy-submit-btn">', unsafe_allow_html=True)
+        if st.button("🚀 Submit OT Request", key="ot_sub_btn", use_container_width=True):
             if task_type == 'Select Task...':
                 st.error("Please select a valid Task Type.")
             else:
@@ -1026,11 +1048,12 @@ if st.session_state.current_view == "portal":
                             st.success(f"✅ OT Request successfully submitted for {target_name} ({ot_hours} hrs)!")
                     finally:
                         release_connection(conn)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==================== 2. HISTORY TAB ====================
 elif st.session_state.current_view == "history":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         conn = get_connection()
         try:
             df = pd.read_sql("SELECT * FROM ot_logs WHERE employee_name = %s", conn, params=(user['name'],))
@@ -1087,11 +1110,11 @@ elif st.session_state.current_view == "history":
 # ==================== 3. APPROVAL DASHBOARD ====================
 elif st.session_state.current_view == "dashboard":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         st.markdown("""
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">📊 TL Approval Dashboard & Analytics</div>
-                <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <div style="font-size:19px; font-weight:800; color:#0E2B5C;">📊 TL Approval Dashboard & Analytics</div>
+                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1113,58 +1136,58 @@ elif st.session_state.current_view == "dashboard":
             approved_count = len(df[df['status'] == 'Approved'])
             
             st.markdown(f"""
-                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:25px;">
-                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E7EB; padding:18px;">
-                        <div style="font-size:26px; font-weight:800; color:#0E2B5C;">{total_ot_hours:.1f}</div>
-                        <div style="font-size:11px; font-weight:700; color:#605E5C; margin-top:4px;">OT HOURS</div>
+                <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:20px;">
+                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
+                        <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{total_ot_hours:.1f}</div>
+                        <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">OT HOURS</div>
                     </div>
-                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E7EB; padding:18px;">
-                        <div style="font-size:26px; font-weight:800; color:#0E2B5C;">₹{total_ot_cost:.0f}</div>
-                        <div style="font-size:11px; font-weight:700; color:#605E5C; margin-top:4px;">OT COST</div>
+                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
+                        <div style="font-size:24px; font-weight:800; color:#0E2B5C;">₹{total_ot_cost:.0f}</div>
+                        <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">OT COST</div>
                     </div>
-                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E7EB; padding:18px;">
-                        <div style="font-size:26px; font-weight:800; color:#0E2B5C;">{pending_count}</div>
-                        <div style="font-size:11px; font-weight:700; color:#605E5C; margin-top:4px;">PENDING</div>
+                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
+                        <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{pending_count}</div>
+                        <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">PENDING</div>
                     </div>
-                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E7EB; padding:18px;">
-                        <div style="font-size:26px; font-weight:800; color:#0E2B5C;">{approved_count}</div>
-                        <div style="font-size:11px; font-weight:700; color:#605E5C; margin-top:4px;">APPROVED</div>
+                    <div class="kpi-box" style="border-radius:12px; border:1px solid #E5E9F0; padding:16px;">
+                        <div style="font-size:24px; font-weight:800; color:#0E2B5C;">{approved_count}</div>
+                        <div style="font-size:10.5px; font-weight:700; color:#605E5C; margin-top:4px;">APPROVED</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
             
             ch1, ch2, ch3 = st.columns(3)
             with ch1:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#0E2B5C; text-align:center;'>📊 STATUS BREAKDOWN</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>📊 STATUS BREAKDOWN</div>", unsafe_allow_html=True)
                 status_df = df['status'].value_counts().reset_index()
                 status_df.columns = ['Status', 'Count']
-                pie = alt.Chart(status_df).mark_arc(innerRadius=42).encode(
+                pie = alt.Chart(status_df).mark_arc(innerRadius=38).encode(
                     theta="Count:Q",
-                    color=alt.Color("Status:N", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#10B981', '#EF4444']))
-                ).properties(height=180)
+                    color=alt.Color("Status:N", scale=alt.Scale(domain=['Pending', 'Approved', 'Rejected'], range=['#F59E0B', '#00B67A', '#EF4444']))
+                ).properties(height=170)
                 st.altair_chart(pie, use_container_width=True)
                 
             with ch2:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#0E2B5C; text-align:center;'>⚡ TASK-WISE OT HOURS</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>⚡ TASK-WISE OT HOURS</div>", unsafe_allow_html=True)
                 task_df = df.groupby('task_type')['ot_hours'].sum().reset_index()
-                bar = alt.Chart(task_df).mark_bar(color='#1F3A60', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                bar = alt.Chart(task_df).mark_bar(color='#1C377B', cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
                     x=alt.X('task_type:N', title=None),
                     y=alt.Y('ot_hours:Q', title=None)
-                ).properties(height=180)
+                ).properties(height=170)
                 st.altair_chart(bar, use_container_width=True)
                 
             with ch3:
-                st.markdown("<div style='font-size:12px; font-weight:700; color:#0E2B5C; text-align:center;'>🎯 PRODUCTIVITY COMPLIANCE</div>", unsafe_allow_html=True)
+                st.markdown("<div style='font-size:11.5px; font-weight:700; color:#0E2B5C; text-align:center;'>🎯 PRODUCTIVITY COMPLIANCE</div>", unsafe_allow_html=True)
                 comp_count = len(df[df['productivity'] >= 0.70])
                 low_count = len(df[df['productivity'] < 0.70])
                 comp_df = pd.DataFrame({'Compliance': ['Compliant (≥70%)', 'Low (<70%)'], 'Count': [comp_count, low_count]})
-                comp_pie = alt.Chart(comp_df).mark_arc(innerRadius=42).encode(
+                comp_pie = alt.Chart(comp_df).mark_arc(innerRadius=38).encode(
                     theta="Count:Q",
-                    color=alt.Color("Compliance:N", scale=alt.Scale(domain=['Compliant (≥70%)', 'Low (<70%)'], range=['#10B981', '#EF4444']))
-                ).properties(height=180)
+                    color=alt.Color("Compliance:N", scale=alt.Scale(domain=['Compliant (≥70%)', 'Low (<70%)'], range=['#00B67A', '#EF4444']))
+                ).properties(height=170)
                 st.altair_chart(comp_pie, use_container_width=True)
 
-            st.markdown("<hr style='border:none; border-top:1px solid #E5E7EB; margin:20px 0;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='border:none; border-top:1px solid #E5E9F0; margin:16px 0;'>", unsafe_allow_html=True)
             
             f_c1, f_c2, f_c3, f_c4, f_c5, f_c6 = st.columns(6)
             with f_c1:
@@ -1197,7 +1220,7 @@ elif st.session_state.current_view == "dashboard":
             pending_rows = filtered_df[filtered_df['status'] == 'Pending']
             if not pending_rows.empty:
                 for idx, p_row in pending_rows.iterrows():
-                    p_c1, p_c2, p_c3, p_c4, p_c5, p_c6 = st.columns([2.5, 1.5, 1.5, 2, 1.5, 1.5])
+                    p_c1, p_c2, p_c3, p_c4, p_c5, p_c6 = st.columns([2.5, 1.4, 1.4, 1.8, 1.4, 1.4])
                     with p_c1:
                         st.markdown(f"**{p_row['employee_name']}**<br><span style='font-size:12px; color:#605E5C;'>{p_row['date']} | {p_row['task_type']} ({p_row['ot_hours']}h)</span>", unsafe_allow_html=True)
                     with p_c2:
@@ -1244,7 +1267,7 @@ elif st.session_state.current_view == "dashboard":
                                 finally:
                                     release_connection(conn)
                                 st.rerun()
-                    st.markdown("<hr style='border:none; border-top:1px dashed #E5E7EB; margin:10px 0;'>", unsafe_allow_html=True)
+                    st.markdown("<hr style='border:none; border-top:1px dashed #E5E9F0; margin:8px 0;'>", unsafe_allow_html=True)
             
             d_table = filtered_df.copy()
             d_table['formatted_date'] = pd.to_datetime(d_table['date']).dt.strftime('%d-%b-%Y')
@@ -1265,11 +1288,11 @@ elif st.session_state.current_view == "dashboard":
 # ==================== 4. REPORTS ENGINE ====================
 elif st.session_state.current_view == "reports":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         st.markdown("""
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">📄 Advanced Reports Engine</div>
-                <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="font-size:19px; font-weight:800; color:#0E2B5C;">📄 Advanced Reports Engine</div>
+                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1308,18 +1331,18 @@ elif st.session_state.current_view == "reports":
             tot_payout = filtered_rep[filtered_rep['status'] == 'Approved']['amount'].sum()
             
             st.markdown(f"""
-                <div style="background:#1F3A60; border-radius:12px; padding:18px 24px; display:grid; grid-template-columns:repeat(3, 1fr); text-align:center; color:#FFFFFF; margin:22px 0;">
+                <div style="background:#1C377B; border-radius:12px; padding:16px 20px; display:grid; grid-template-columns:repeat(3, 1fr); text-align:center; color:#FFFFFF; margin:20px 0;">
                     <div>
-                        <div style="font-size:11px; font-weight:700; letter-spacing:0.5px; opacity:0.8;">TOTAL EMPLOYEES</div>
-                        <div style="font-size:26px; font-weight:800; margin-top:4px;">{tot_emp}</div>
+                        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL EMPLOYEES</div>
+                        <div style="font-size:24px; font-weight:800; margin-top:3px;">{tot_emp}</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; font-weight:700; letter-spacing:0.5px; opacity:0.8;">TOTAL HOURS</div>
-                        <div style="font-size:26px; font-weight:800; margin-top:4px;">{tot_hrs:.1f}</div>
+                        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL HOURS</div>
+                        <div style="font-size:24px; font-weight:800; margin-top:3px;">{tot_hrs:.1f}</div>
                     </div>
                     <div>
-                        <div style="font-size:11px; font-weight:700; letter-spacing:0.5px; opacity:0.8;">TOTAL PAYOUT</div>
-                        <div style="font-size:26px; font-weight:800; margin-top:4px;">₹{tot_payout:.0f}</div>
+                        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.5px; opacity:0.85;">TOTAL PAYOUT</div>
+                        <div style="font-size:24px; font-weight:800; margin-top:3px;">₹{tot_payout:.0f}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -1358,14 +1381,14 @@ elif st.session_state.current_view == "reports":
 # ==================== 5. ADMIN PANEL ====================
 elif st.session_state.current_view == "admin":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         st.markdown("""
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <div>
-                    <div style="font-size:20px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
-                    <div style="font-size:13px; color:#605E5C; margin-top:2px;">Single creation, bulk imports, directory edits, and security audit trail</div>
+                    <div style="font-size:19px; font-weight:800; color:#0E2B5C;">⚙️ Admin User Management & Onboarding</div>
+                    <div style="font-size:12.5px; color:#605E5C; margin-top:2px;">Single creation, bulk imports, directory edits, and security audit trail</div>
                 </div>
-                <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1516,19 +1539,19 @@ elif st.session_state.current_view == "admin":
 # ==================== 6. GUIDELINES & SECURITY POLICY PAGE ====================
 elif st.session_state.current_view == "guidelines":
     with st.container():
-        st.markdown('<div class="page-card-marker"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-anchor"></div>', unsafe_allow_html=True)
         st.markdown("""
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
                 <div>
-                    <h2 style="margin: 0 0 5px 0; color: #0E2B5C; font-weight: 800;">📖 Portal Guidelines & Data Security Policy</h2>
-                    <p style="color: #605E5C; font-size: 13px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
+                    <h2 style="margin: 0 0 4px 0; color: #0E2B5C; font-weight: 800; font-size: 20px;">📖 Portal Guidelines & Data Security Policy</h2>
+                    <p style="color: #605E5C; font-size: 12.5px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
                 </div>
-                <div style="font-size:22px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
+                <div style="font-size:20px; font-weight:800; color:#0E2B5C;">EXCIT<span style="color:#FF6B00;">EL</span></div>
             </div>
 
             <div class="policy-card">
-                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 16px;">1. How to Apply & Workflow Guidelines</h3>
-                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 15px;">1. How to Apply & Workflow Guidelines</h3>
+                <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
                     <li><b>Employees:</b> Log in using your assigned official email credentials. Navigate to the <b>OT Form</b> tab, verify your shift timings, select your task category, and submit your overtime duration. Review past records in the <b>History</b> tab.</li>
                     <li><b>Team Leaders (TL):</b> Monitor pending overtime submissions under the <b>Dashboard</b> tab. Verify actual units produced against the standard expected output target, and issue approvals or rejections accordingly. TLs may submit proxy requests for team members via the Form tab.</li>
                     <li><b>Overtime Calculation:</b> Standard verified payouts are computed based on operational output targets and verified hours. Weekend and weekday rates follow the standardized enterprise rate card.</li>
@@ -1536,8 +1559,8 @@ elif st.session_state.current_view == "guidelines":
             </div>
 
             <div class="policy-card">
-                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 16px;">2. Operational Limits & Threshold Rules</h3>
-                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                <h3 style="color: #0E2B5C; margin-top: 0; font-size: 15px;">2. Operational Limits & Threshold Rules</h3>
+                <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
                     <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
                     <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
                     <li><b>Submission Window:</b> Claims must be entered within <b>48 hours</b> of shift completion. Older dates are locked out.</li>
@@ -1547,8 +1570,8 @@ elif st.session_state.current_view == "guidelines":
             </div>
 
             <div class="policy-card" style="border-left: 5px solid #991B1B;">
-                <h3 style="color: #991B1B; margin-top: 0; font-size: 16px;">3. Data Security & Anti-Falsification Policy</h3>
-                <ul style="color: #201F1E; font-size: 14px; line-height: 1.6;">
+                <h3 style="color: #991B1B; margin-top: 0; font-size: 15px;">3. Data Security & Anti-Falsification Policy</h3>
+                <ul style="color: #201F1E; font-size: 13.5px; line-height: 1.6;">
                     <li><b>Strict Prohibition of False Records:</b> Logging fabricated overtime hours, inflating output units, or misrepresenting timings is strictly prohibited and constitutes a direct breach of employment conduct.</li>
                     <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system audit database.</li>
                     <li><b>Self-Approval Prohibition:</b> Supervisors and managers cannot approve their own overtime claims.</li>
@@ -1571,7 +1594,7 @@ with footer_col2:
         st.rerun()
 
 st.markdown("""
-    <div style="text-align:center; padding:15px 0 30px 0; color:#605E5C; font-size:12px; font-weight:600;">
+    <div style="text-align:center; padding:12px 0 25px 0; color:#605E5C; font-size:12px; font-weight:600;">
         © Excitel Broadband Private Limited — Enterprise Overtime Tracking Protocol
     </div>
 """, unsafe_allow_html=True)
