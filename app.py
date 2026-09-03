@@ -637,7 +637,7 @@ if 'user_name' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state.current_view = "portal"
 
-# ==================== LOGIN GATEWAY (UNIFIED & CLEAN) ====================
+# ==================== LOGIN GATEWAY (FULLY UNIFIED & CLEAN) ====================
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="excitel-topbar">
@@ -651,7 +651,7 @@ if not st.session_state.authenticated:
         </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.4, 1])
+    col1, col2, col3 = st.columns([1, 1.35, 1])
     with col2:
         st.markdown('<div class="workspace-card-box">', unsafe_allow_html=True)
         st.markdown("""
