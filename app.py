@@ -106,7 +106,6 @@ def init_db():
 
 init_db()
 
-# Helper to dispatch in-app notifications
 def send_notification(recipient_email, message):
     try:
         conn = get_connection()
@@ -139,6 +138,14 @@ st.markdown("""
             box-shadow: 0 8px 24px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
             margin-bottom: 20px;
             border-top: 6px solid #FF6B00;
+        }
+        .policy-card {
+            background: #FFFFFF;
+            border: 1px solid #E1DFDD;
+            border-radius: 10px;
+            padding: 20px 24px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+            margin-bottom: 16px;
         }
         .brand-logo {
             font-size: 26px;
@@ -176,6 +183,14 @@ st.markdown("""
             margin-bottom: 8px;
             font-size: 13px;
         }
+        .footer-note {
+            text-align: center;
+            color: #605E5C;
+            font-size: 13px;
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #E1DFDD;
+        }
         h1, h2, h3 { color: #1E3A8A; font-weight: 600; }
         [data-testid="stSidebar"] {
             background-color: #FFFFFF;
@@ -185,7 +200,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==================== SESSION TIMEOUT LOGIC ====================
-INACTIVITY_TIMEOUT_SECONDS = 1800  # 30 Minutes
+INACTIVITY_TIMEOUT_SECONDS = 1800
 
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -200,7 +215,6 @@ if 'current_view' not in st.session_state:
 if 'last_activity' not in st.session_state:
     st.session_state.last_activity = time.time()
 
-# Check for session expiration
 if st.session_state.authenticated:
     if time.time() - st.session_state.last_activity > INACTIVITY_TIMEOUT_SECONDS:
         st.session_state.authenticated = False
@@ -346,7 +360,6 @@ st.sidebar.markdown(f"**Signed In As:**  \n`{user['name']}`")
 st.sidebar.markdown(f"**Role:** `{user['role']}`")
 
 st.sidebar.markdown("---")
-# Notifications Panel
 conn = get_connection()
 notifs_df = pd.read_sql("SELECT message, created_at FROM notifications WHERE recipient_email = %s ORDER BY id DESC LIMIT 5", conn, params=(user['email'],))
 conn.close()
@@ -368,7 +381,7 @@ if st.sidebar.button("🚪 Sign Out", use_container_width=True):
 
 st.sidebar.caption("⏱️ Session timeout: 30m idle")
 
-# ==================== STRICT ROLE NAVIGATION ====================
+# ==================== NAVIGATION BAR ====================
 st.markdown(f"<div style='font-size: 14px; font-weight: 600; color: #1E3A8A; margin-bottom: 8px;'>🛡️ Secure Session: <b>{user['name']}</b> ({user['role']})</div>", unsafe_allow_html=True)
 
 nav_cols = st.columns(5)
@@ -419,14 +432,14 @@ def highlight_status(val):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
     return ''
 
-# ==================== 1. OT FORM PORTAL (WITH DAILY 3H & WEEKLY 12H CAPS) ====================
+# ==================== 1. OT FORM PORTAL ====================
 if st.session_state.current_view == "portal":
     st.markdown("""
         <div class="fluent-card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">⚡ Overtime Entry Portal</h2>
-                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Policy Limits: <b>Max 3 hrs/day</b> | <b>Max 12 hrs/week</b>. Standard weekday/weekend rate applies.</p>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Submit and manage overtime requests with real-time policy verification.</p>
                 </div>
                 <div class="brand-logo">EXCIT<span>EL</span></div>
             </div>
@@ -482,23 +495,17 @@ if st.session_state.current_view == "portal":
         ot_hours = (o_end_min - o_start_min) / 60.0
         req_date_str = req_date.strftime("%Y-%m-%d")
         
-        # Validation 1: Shift Overlap
         if max(s_start_min, o_start_min) < min(s_end_min, o_end_min):
             st.error("❌ Overtime hours cannot overlap regular shift timings.")
-        # Validation 2: Positive Duration
         elif ot_hours <= 0:
             st.error("❌ OT End time must be after Start time.")
-        # Validation 3: Daily 3-Hour Cap
         elif ot_hours > 3.0:
             st.error(f"❌ Policy Violation: Overtime cannot exceed 3.0 hours in a single day (Requested: {ot_hours:.1f} hrs).")
         else:
-            # Check Cumulative Daily & Weekly Caps in Database
             conn = get_connection()
-            # Daily check
             daily_check = pd.read_sql("SELECT ot_hours FROM ot_logs WHERE employee_name = %s AND date = %s AND status != 'Rejected'", conn, params=(target_name, req_date_str))
             existing_daily = daily_check['ot_hours'].sum()
             
-            # Weekly check (Monday to Sunday)
             week_start = req_date - timedelta(days=req_date.weekday())
             week_end = week_start + timedelta(days=6)
             weekly_check = pd.read_sql(
@@ -513,7 +520,7 @@ if st.session_state.current_view == "portal":
                 st.error(f"❌ Daily Limit Exceeded: You already have {existing_daily:.1f} hrs logged on {req_date_str}. Adding {ot_hours:.1f} hrs exceeds the 3.0h daily limit.")
             elif existing_weekly + ot_hours > 12.0:
                 conn.close()
-                st.error(f"❌ Weekly Limit Exceeded: You have {existing_weekly:.1f} hrs logged this week ({week_start} to {week_end}). Adding {ot_hours:.1f} hrs exceeds the 12.0h weekly policy cap.")
+                st.error(f"❌ Weekly Limit Exceeded: You have {existing_weekly:.1f} hrs logged this week. Adding {ot_hours:.1f} hrs exceeds the 12.0h weekly limit.")
             else:
                 std_rate = RATES.get(task_type, 12)
                 expected_out = ot_hours * std_rate
@@ -524,7 +531,6 @@ if st.session_state.current_view == "portal":
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, 0, 0, 0, '', '')
                 """, (req_date_str, target_name, target_emp_id, shift_start.strftime("%H:%M"), shift_end.strftime("%H:%M"), ot_start.strftime("%H:%M"), ot_end.strftime("%H:%M"), ot_hours, task_type, "Pending", target_tl, std_rate, expected_out))
                 
-                # Fetch TL email to send alert
                 cursor.execute("SELECT email FROM users WHERE name = %s", (target_tl,))
                 tl_email_res = cursor.fetchone()
                 conn.commit()
@@ -584,7 +590,7 @@ elif st.session_state.current_view == "history":
             styled_history = filtered_history[['date', 'ot_hours', 'task_type', 'productivity', 'status', 'amount']].style.applymap(highlight_status, subset=['status'])
             st.dataframe(styled_history, use_container_width=True)
 
-# ==================== 3. APPROVAL DASHBOARD (WITH BATCH APPROVAL) ====================
+# ==================== 3. APPROVAL DASHBOARD ====================
 elif st.session_state.current_view == "dashboard":
     if user['role'] not in ["TL", "Admin"]:
         st.error("⛔ Access Denied. Dashboard is restricted to Team Leaders and Admins.")
@@ -643,7 +649,6 @@ elif st.session_state.current_view == "dashboard":
                 else:
                     st.info("No approved payout trends to graph yet.")
 
-            # Batch Approvals Section
             st.markdown("### ⚡ Batch Approval Action")
             pending_df = df[df['status'] == 'Pending']
             
@@ -651,8 +656,7 @@ elif st.session_state.current_view == "dashboard":
                 st.success("🎉 All caught up! No pending requests.")
             else:
                 with st.expander("⚡ Multi-Select Batch Approval", expanded=True):
-                    st.write("Select multiple pending requests to approve them simultaneously with 100% target verified:")
-                    
+                    st.write("Select multiple pending requests to approve them simultaneously:")
                     selected_ids = []
                     for idx, r in pending_df.iterrows():
                         col_chk, col_det = st.columns([0.5, 9.5])
@@ -664,8 +668,7 @@ elif st.session_state.current_view == "dashboard":
                             st.write(f"📌 **{r['employee_name']}** | {r['date']} | {r['ot_hours']} hrs | {r['task_type']} | Expected: {r['expected_output']}")
                     
                     if selected_ids:
-                        col_b_act1, col_b_act2 = st.columns(2)
-                        if col_b_act1.button(f"Approve Selected ({len(selected_ids)}) ✅", type="primary"):
+                        if st.button(f"Approve Selected ({len(selected_ids)}) ✅", type="primary"):
                             conn = get_connection()
                             cursor = conn.cursor()
                             for req in selected_ids:
@@ -676,7 +679,6 @@ elif st.session_state.current_view == "dashboard":
                                     WHERE id = %s
                                 """, (req['expected_output'], v_hrs, amt, user['name'], datetime.now().strftime("%Y-%m-%d %H:%M"), req['id']))
                                 
-                                # Send notification to employee
                                 cursor.execute("SELECT email FROM users WHERE name = %s", (req['employee_name'],))
                                 emp_mail = cursor.fetchone()
                                 if emp_mail:
@@ -932,3 +934,60 @@ elif st.session_state.current_view == "admin":
                     if act_col2.button("🗑️", key=f"del_btn_{row['email']}", help="Delete User"):
                         delete_user_dialog(row['email'], user['email'])
                     st.markdown("<hr style='margin: 0px; padding: 0px; border-top: 1px solid #F0F0F0;'>", unsafe_allow_html=True)
+
+# ==================== 6. GUIDELINES & SECURITY POLICY PAGE ====================
+elif st.session_state.current_view == "guidelines":
+    st.markdown("""
+        <div class="fluent-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0 0 5px 0; color: #1E3A8A;">📖 Portal Guidelines & Data Security Policy</h2>
+                    <p style="color: #605E5C; font-size: 14px; margin: 0;">Official operating guidelines, overtime policy thresholds, and enterprise security standards.</p>
+                </div>
+                <div class="brand-logo">EXCIT<span>EL</span></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div class="policy-card">
+            <h3 style="color: #1E3A8A; margin-top: 0;">1. How to Apply & Workflow Guidelines</h3>
+            <ul>
+                <li><b>Employees:</b> Log in using your assigned official email credentials. Navigate to the <b>Form</b> tab, verify your shift timings, select your task category, and submit your overtime duration. Review past statuses in the <b>History</b> tab.</li>
+                <li><b>Team Leaders (TL):</b> Monitor pending overtime submissions under the <b>Dashboard</b> tab. Verify actual units produced against the standard expected output target, and issue approvals or rejections accordingly. TLs may submit proxy requests for team members via the Form tab.</li>
+                <li><b>Overtime Calculation:</b> Standard verified payouts are computed based on operational output targets and verified hours. Weekend and weekday rates follow the standardized enterprise rate card.</li>
+            </ul>
+        </div>
+
+        <div class="policy-card">
+            <h3 style="color: #1E3A8A; margin-top: 0;">2. Operational Limits & Threshold Rules</h3>
+            <ul>
+                <li><b>Daily Cap:</b> An employee cannot exceed <b>3.0 hours</b> of overtime in a single calendar day.</li>
+                <li><b>Weekly Cap:</b> Total aggregated overtime cannot exceed <b>12.0 hours</b> in a rolling calendar week (Monday through Sunday).</li>
+                <li><b>Shift Overlap Prohibition:</b> Overtime hours must not intersect with regular scheduled shift timings under any circumstances. Overlapping submissions will be automatically blocked by system validation.</li>
+            </ul>
+        </div>
+
+        <div class="policy-card" style="border-left: 5px solid #991B1B;">
+            <h3 style="color: #991B1B; margin-top: 0;">3. Data Security & Anti-Falsification Policy</h3>
+            <ul>
+                <li><b>Strict Prohibition of False Records:</b> Logging fabricated overtime hours, inflating output units, or misrepresenting timings is strictly prohibited and constitutes a direct breach of employment conduct.</li>
+                <li><b>Audit Trail:</b> All actions—including form submission times, approval timestamps, and administrative edits—are recorded with user identification in the system database.</li>
+                <li><b>Disciplinary Enforcement:</b> Any user caught manipulating credentials, submitting fraudulent overtime, or circumventing system role permissions will be subject to immediate disciplinary review and loss of portal access.</li>
+                <li><b>Credential Confidentiality:</b> Users are strictly accountable for maintaining the confidentiality of their portal passwords. Never share passwords or allow third parties to operate under your login session.</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("⬅️ Return to Main Portal", use_container_width=True):
+        st.session_state.current_view = "portal"
+        st.rerun()
+
+# ==================== PERSISTENT FOOTER LINK ====================
+st.markdown("<br><br>", unsafe_allow_html=True)
+footer_col1, footer_col2, footer_col3 = st.columns([1, 2.5, 1])
+with footer_col2:
+    if st.button("📖 Read Portal Guidelines, Usage Rules & Data Security Policy", use_container_width=True):
+        st.session_state.current_view = "guidelines"
+        st.rerun()
+st.markdown("<div class='footer-note'>© Excitel Overtime Portal — Official Enterprise Compliance & Data Protection</div>", unsafe_allow_html=True)
